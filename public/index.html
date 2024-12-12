@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e3a8a">
+    <title>Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-blue-50 font-sans text-gray-800">
+    <!-- Control Panel Header -->
+<header class="bg-blue-600 text-white p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">Control Panel - Hardik's App</h1>
+        <div class="text-sm">Version 1.0</div>
+    </div>
+    <!-- Add a navigation link to the Environments page -->
+    <nav class="bg-blue-600 text-white">
+        <div class="container mx-auto">
+            <ul class="flex space-x-4 justify-center md:justify-start p-2">
+                <li><a href="/" class="hover:underline">Control Panel</a></li>
+                <li><a href="/environments" class="hover:underline">Manage Environments</a></li>
+                <!-- Button to checkout out -->
+                <li><a href="/checkout" class="hover:underline">Checkout Env.</a></li>
+                <li><a href="/csproj" class="hover:underline">Checkout csproj</a></li>
+                <li><a href="/exclude" class="hover:underline">Exclude</a></li>
+            </ul>
+        </div>
+    </nav>
+</header>
+
+
+    <!-- Main Content -->
+    <main class="p-6">
+        <div class="container mx-auto">
+            <!-- Form for Selecting Environment and Updating Settings -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold mb-4">Update Environment</h2>
+                <form id="updateForm" class="bg-white shadow-lg rounded-lg p-6">
+                    <div class="mb-4">
+                        <label for="environment" class="block text-gray-700 font-semibold">Select Environment</label>
+                        <select id="environment" class="w-full mt-2 p-2 border border-gray-300 rounded-lg">
+                            <!-- Dropdown options will be dynamically populated -->
+                        </select>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
+                            Update Active Environment
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Configuration Page -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold mb-4">Add New Environment Configuration</h2>
+                <form id="configForm" class="bg-white shadow-lg rounded-lg p-6">
+                    <div class="mb-4">
+                        <label for="envName" class="block text-gray-700 font-semibold">Environment Name</label>
+                        <input type="text" id="envName" class="w-full mt-2 p-2 border border-gray-300 rounded-lg"
+                            placeholder="e.g., Development, Production">
+                    </div>
+                    <div class="mb-4">
+                        <label for="envValue" class="block text-gray-700 font-semibold">Configuration Value
+                            (Encrypted)</label>
+                        <textarea id="envValue" rows="4" class="w-full mt-2 p-2 border border-gray-300 rounded-lg"
+                            placeholder="Encrypted value for configuration"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-700">
+                            Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto text-center text-sm">
+            <p>&copy; 2024 by Hardik Kanjariya. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        async function loadEnvironments() {
+            const response = await fetch('/api/environments');
+            const environments = await response.json();
+            const selectElement = document.getElementById('environment');
+            selectElement.innerHTML = ''; // Clear existing options
+
+            environments.forEach(env => {
+                const option = document.createElement('option');
+                option.value = env.name;
+                option.textContent = env.name;
+                selectElement.appendChild(option);
+            });
+        }
+
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const envName = document.getElementById('envName').value;
+            const envValue = document.getElementById('envValue').value;
+
+            if (envName && envValue) {
+                await fetch('/add-environment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: envName, value: envValue })
+                });
+                alert('Configuration saved!');
+                loadEnvironments();
+            } else {
+                alert('Please fill in all fields.');
+            }
+        });
+
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selectedEnv = document.getElementById('environment').value;
+
+            if (selectedEnv) {
+                await fetch('/update-environment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selectedEnv })
+                });
+                alert('Active Environment Updated: ' + selectedEnv);
+            } else {
+                alert('Please select an environment.');
+            }
+        });
+
+        loadEnvironments();
+    </script>
+</body>
+
+</html>

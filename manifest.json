@@ -1,0 +1,23 @@
+{
+    "name": "Environmental Control Panel",
+    "short_name": "EnvControl",
+    "description": "Control and manage environment configurations for your system appsettings.json files.",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1D4ED8",
+    "icons": [
+        {
+            "src": "https://placehold.co/192x192",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://placehold.co/512x512",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "scope": "/",
+    "orientation": "portrait"
+}
