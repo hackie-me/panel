@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.Dnata_Training.json",
+    "EDINotification_API/appsettings.Dnata_Training.json",
+    "Export_API/appsettings.Dnata_Training.json",
+    "Hangfire_API/appsettings.Dnata_Training.json",
+    "Import_API/appsettings.Dnata_Training.json",
+    "Integration_API/appsettings.Dnata_Training.json",
+    "Invoice_API/appsettings.Dnata_Training.json",
+    "LCCT_API/appsettings.Dnata_Training.json",
+    "LEMP_API/appsettings.Dnata_Training.json",
+    "Login_API/appsettings.Dnata_Training.json",
+    "Logs_API/appsettings.Dnata_Training.json",
+    "Master_API/appsettings.Dnata_Training.json",
+    "Passenger_API/appsettings.Dnata_Training.json",
+    "PCS_API/appsettings.Dnata_Training.json",
+    "Report_API/appsettings.Dnata_Training.json",
+    "Stock_API/appsettings.Dnata_Training.json",
+    "Tariff_API/appsettings.Dnata_Training.json",
+    "TrackTrace_API/appsettings.Dnata_Training.json",
+    "TSM_API/appsettings.Dnata_Training.json",
+    "User_API/appsettings.Dnata_Training.json",
+    "Workflow_API/appsettings.Dnata_Training.json",
+    "Workorder_API/appsettings.Dnata_Training.json"
+  ]
+}

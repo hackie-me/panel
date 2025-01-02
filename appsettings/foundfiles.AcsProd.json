@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.AcsProd.json",
+    "EDINotification_API/appsettings.AcsProd.json",
+    "Export_API/appsettings.AcsProd.json",
+    "Hangfire_API/appsettings.AcsProd.json",
+    "Import_API/appsettings.AcsProd.json",
+    "Integration_API/appsettings.AcsProd.json",
+    "Invoice_API/appsettings.AcsProd.json",
+    "LCCT_API/appsettings.AcsProd.json",
+    "LEMP_API/appsettings.AcsProd.json",
+    "Login_API/appsettings.AcsProd.json",
+    "Logs_API/appsettings.AcsProd.json",
+    "Master_API/appsettings.AcsProd.json",
+    "Passenger_API/appsettings.AcsProd.json",
+    "PCS_API/appsettings.AcsProd.json",
+    "Report_API/appsettings.AcsProd.json",
+    "Stock_API/appsettings.AcsProd.json",
+    "Tariff_API/appsettings.AcsProd.json",
+    "TrackTrace_API/appsettings.AcsProd.json",
+    "TSM_API/appsettings.AcsProd.json",
+    "User_API/appsettings.AcsProd.json",
+    "Workflow_API/appsettings.AcsProd.json",
+    "Workorder_API/appsettings.AcsProd.json"
+  ]
+}

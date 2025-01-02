@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.Dnata_UAT2.json",
+    "EDINotification_API/appsettings.Dnata_UAT2.json",
+    "Export_API/appsettings.Dnata_UAT2.json",
+    "Hangfire_API/appsettings.Dnata_UAT2.json",
+    "Import_API/appsettings.Dnata_UAT2.json",
+    "Integration_API/appsettings.Dnata_UAT2.json",
+    "Invoice_API/appsettings.Dnata_UAT2.json",
+    "LCCT_API/appsettings.Dnata_UAT2.json",
+    "LEMP_API/appsettings.Dnata_UAT2.json",
+    "Login_API/appsettings.Dnata_UAT2.json",
+    "Logs_API/appsettings.Dnata_UAT2.json",
+    "Master_API/appsettings.Dnata_UAT2.json",
+    "Passenger_API/appsettings.Dnata_UAT2.json",
+    "PCS_API/appsettings.Dnata_UAT2.json",
+    "Report_API/appsettings.Dnata_UAT2.json",
+    "Stock_API/appsettings.Dnata_UAT2.json",
+    "Tariff_API/appsettings.Dnata_UAT2.json",
+    "TrackTrace_API/appsettings.Dnata_UAT2.json",
+    "TSM_API/appsettings.Dnata_UAT2.json",
+    "User_API/appsettings.Dnata_UAT2.json",
+    "Workflow_API/appsettings.Dnata_UAT2.json",
+    "Workorder_API/appsettings.Dnata_UAT2.json"
+  ]
+}

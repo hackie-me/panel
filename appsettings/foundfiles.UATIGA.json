@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.UATIGA.json",
+    "EDINotification_API/appsettings.UATIGA.json",
+    "Export_API/appsettings.UATIGA.json",
+    "Hangfire_API/appsettings.UATIGA.json",
+    "Import_API/appsettings.UATIGA.json",
+    "Integration_API/appsettings.UATIGA.json",
+    "Invoice_API/appsettings.UATIGA.json",
+    "LCCT_API/appsettings.UATIGA.json",
+    "LEMP_API/appsettings.UATIGA.json",
+    "Login_API/appsettings.UATIGA.json",
+    "Logs_API/appsettings.UATIGA.json",
+    "Master_API/appsettings.UATIGA.json",
+    "Passenger_API/appsettings.UATIGA.json",
+    "PCS_API/appsettings.UATIGA.json",
+    "Report_API/appsettings.UATIGA.json",
+    "Stock_API/appsettings.UATIGA.json",
+    "Tariff_API/appsettings.UATIGA.json",
+    "TrackTrace_API/appsettings.UATIGA.json",
+    "TSM_API/appsettings.UATIGA.json",
+    "User_API/appsettings.UATIGA.json",
+    "Workflow_API/appsettings.UATIGA.json",
+    "Workorder_API/appsettings.UATIGA.json"
+  ]
+}

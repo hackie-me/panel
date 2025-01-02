@@ -24,7 +24,7 @@ app.get('/environments', (req, res) => {
 
 // Route to get all environment configurations
 app.get('/api/environments', (req, res) => {
-    fs.readFile('panel/config.json', 'utf8', (err, data) => {
+    fs.readFile('./panel/config.json', 'utf8', (err, data) => {
         if (err) {
             return res.status(500).send(err);
         }
@@ -41,7 +41,7 @@ app.post('/add-environment', (req, res) => {
         return res.status(400).send('Environment name and value are required');
     }
 
-    fs.readFile('panel/config.json', 'utf8', (err, data) => {
+    fs.readFile('./panel/config.json', 'utf8', (err, data) => {
         if (err) {
             return res.status(500).send('Error reading config file');
         }
@@ -49,7 +49,7 @@ app.post('/add-environment', (req, res) => {
         const environments = JSON.parse(data);
         environments.push({ name, value });
 
-        fs.writeFile('panel/config.json', JSON.stringify(environments, null, 2), 'utf8', (err) => {
+        fs.writeFile('./panel/config.json', JSON.stringify(environments, null, 2), 'utf8', (err) => {
             if (err) {
                 return res.status(500).send('Error saving configuration');
             }
@@ -66,7 +66,7 @@ app.post('/update-environment', (req, res) => {
         return res.status(400).send('Selected environment is required');
     }
 
-    fs.readFile('panel/config.json', 'utf8', (err, data) => {
+    fs.readFile('./panel/config.json', 'utf8', (err, data) => {
         if (err) {
             return res.status(500).send('Error reading config file');
         }
@@ -117,12 +117,12 @@ app.post('/update-environment', (req, res) => {
 // Route to delete environment
 app.delete('/api/environments/:name', (req, res) => {
     const { name } = req.params;
-    fs.readFile('panel/config.json', 'utf8', (err, data) => {
+    fs.readFile('./panel/config.json', 'utf8', (err, data) => {
         if (err) {
             return res.status(500).send('Error reading config file');
         }
         let environments = JSON.parse(data).filter(env => env.name !== name);
-        fs.writeFile('panel/config.json', JSON.stringify(environments, null, 2), 'utf8', (err) => {
+        fs.writeFile('./panel/config.json', JSON.stringify(environments, null, 2), 'utf8', (err) => {
             if (err) {
                 return res.status(500).send('Error deleting environment');
             }
@@ -241,7 +241,7 @@ app.post('/api/setPath', (req, res) => {
     const folderPath = req.query.folderPath;
 
     // Read the system configuration file
-    const systemConfigPath = path.resolve('panel/system.json');
+    const systemConfigPath = path.resolve('./panel/system.json');
     const systemConfig = JSON.parse(fs.readFileSync(systemConfigPath, 'utf-8'));
 
     // Update the project path
@@ -256,7 +256,7 @@ app.post('/api/setPath', (req, res) => {
 
 app.get('/getEnvFiles', (req, res) => {
     try {
-        const systemConfigPath = path.resolve('panel/system.json');
+        const systemConfigPath = path.resolve('./panel/system.json');
         const systemConfig = JSON.parse(fs.readFileSync(systemConfigPath, 'utf-8'));
 
         const folderPath = systemConfig.projectPath;
@@ -265,7 +265,7 @@ app.get('/getEnvFiles', (req, res) => {
         // Save updated system configuration
         fs.writeFileSync(systemConfigPath, JSON.stringify(systemConfig, null, 2), 'utf-8');
 
-        const outputPath = path.resolve('panel/filesTemp.json');
+        const outputPath = path.resolve('./panel/filesTemp.json');
         saveFileSearchResults(folderPath, outputPath); // Ensure this function is defined
 
         const files = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));

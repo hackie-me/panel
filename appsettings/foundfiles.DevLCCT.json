@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.DevLCCT.json",
+    "EDINotification_API/appsettings.DevLCCT.json",
+    "Export_API/appsettings.DevLCCT.json",
+    "Hangfire_API/appsettings.DevLCCT.json",
+    "Import_API/appsettings.DevLCCT.json",
+    "Integration_API/appsettings.DevLCCT.json",
+    "Invoice_API/appsettings.DevLCCT.json",
+    "LCCT_API/appsettings.DevLCCT.json",
+    "LEMP_API/appsettings.DevLCCT.json",
+    "Login_API/appsettings.DevLCCT.json",
+    "Logs_API/appsettings.DevLCCT.json",
+    "Master_API/appsettings.DevLCCT.json",
+    "Passenger_API/appsettings.DevLCCT.json",
+    "PCS_API/appsettings.DevLCCT.json",
+    "Report_API/appsettings.DevLCCT.json",
+    "Stock_API/appsettings.DevLCCT.json",
+    "Tariff_API/appsettings.DevLCCT.json",
+    "TrackTrace_API/appsettings.DevLCCT.json",
+    "TSM_API/appsettings.DevLCCT.json",
+    "User_API/appsettings.DevLCCT.json",
+    "Workflow_API/appsettings.DevLCCT.json",
+    "Workorder_API/appsettings.DevLCCT.json"
+  ]
+}

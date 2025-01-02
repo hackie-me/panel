@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.acsuat.json",
+    "EDINotification_API/appsettings.acsuat.json",
+    "Export_API/appsettings.acsuat.json",
+    "Hangfire_API/appsettings.acsuat.json",
+    "Import_API/appsettings.acsuat.json",
+    "Integration_API/appsettings.acsuat.json",
+    "Invoice_API/appsettings.acsuat.json",
+    "LCCT_API/appsettings.acsuat.json",
+    "LEMP_API/appsettings.acsuat.json",
+    "Login_API/appsettings.acsuat.json",
+    "Logs_API/appsettings.acsuat.json",
+    "Master_API/appsettings.acsuat.json",
+    "Passenger_API/appsettings.acsuat.json",
+    "PCS_API/appsettings.acsuat.json",
+    "Report_API/appsettings.acsuat.json",
+    "Stock_API/appsettings.acsuat.json",
+    "Tariff_API/appsettings.acsuat.json",
+    "TrackTrace_API/appsettings.acsuat.json",
+    "TSM_API/appsettings.acsuat.json",
+    "User_API/appsettings.acsuat.json",
+    "Workflow_API/appsettings.acsuat.json",
+    "Workorder_API/appsettings.acsuat.json"
+  ]
+}

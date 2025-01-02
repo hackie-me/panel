@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.QALemp.json",
+    "EDINotification_API/appsettings.QALemp.json",
+    "Export_API/appsettings.QALemp.json",
+    "Hangfire_API/appsettings.QALemp.json",
+    "Import_API/appsettings.QALemp.json",
+    "Integration_API/appsettings.QALemp.json",
+    "Invoice_API/appsettings.QALemp.json",
+    "LCCT_API/appsettings.QALemp.json",
+    "LEMP_API/appsettings.QALemp.json",
+    "Login_API/appsettings.QALemp.json",
+    "Logs_API/appsettings.QALemp.json",
+    "Master_API/appsettings.QALemp.json",
+    "Passenger_API/appsettings.QALemp.json",
+    "PCS_API/appsettings.QALemp.json",
+    "Report_API/appsettings.QALemp.json",
+    "Stock_API/appsettings.QALemp.json",
+    "Tariff_API/appsettings.QALemp.json",
+    "TrackTrace_API/appsettings.QALemp.json",
+    "TSM_API/appsettings.QALemp.json",
+    "User_API/appsettings.QALemp.json",
+    "Workflow_API/appsettings.QALemp.json",
+    "Workorder_API/appsettings.QALemp.json"
+  ]
+}

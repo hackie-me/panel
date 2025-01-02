@@ -1,0 +1,26 @@
+{
+  "foundFiles": [
+    "API_Gateway/appsettings.ArisePRODLCCT.json",
+    "EDINotification_API/appsettings.ArisePRODLCCT.json",
+    "Export_API/appsettings.ArisePRODLCCT.json",
+    "Hangfire_API/appsettings.ArisePRODLCCT.json",
+    "Import_API/appsettings.ArisePRODLCCT.json",
+    "Integration_API/appsettings.ArisePRODLCCT.json",
+    "Invoice_API/appsettings.ArisePRODLCCT.json",
+    "LCCT_API/appsettings.ArisePRODLCCT.json",
+    "LEMP_API/appsettings.ArisePRODLCCT.json",
+    "Login_API/appsettings.ArisePRODLCCT.json",
+    "Logs_API/appsettings.ArisePRODLCCT.json",
+    "Master_API/appsettings.ArisePRODLCCT.json",
+    "Passenger_API/appsettings.ArisePRODLCCT.json",
+    "PCS_API/appsettings.ArisePRODLCCT.json",
+    "Report_API/appsettings.ArisePRODLCCT.json",
+    "Stock_API/appsettings.ArisePRODLCCT.json",
+    "Tariff_API/appsettings.ArisePRODLCCT.json",
+    "TrackTrace_API/appsettings.ArisePRODLCCT.json",
+    "TSM_API/appsettings.ArisePRODLCCT.json",
+    "User_API/appsettings.ArisePRODLCCT.json",
+    "Workflow_API/appsettings.ArisePRODLCCT.json",
+    "Workorder_API/appsettings.ArisePRODLCCT.json"
+  ]
+}
