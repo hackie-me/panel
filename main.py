@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox, filedialog
 import json
 import os
 import subprocess
+import threading
+from tkinter.scrolledtext import ScrolledText
 
 # JSON file path
 CONFIG_FILE = "config.json"
@@ -425,6 +427,157 @@ def create_app():
 
         table.bind("<Double-1>", handle_action)
 
+
+    def show_run_projects_screen():
+        # Clear previous widgets
+        for widget in main_frame.winfo_children():
+            widget.destroy()
+
+        tk.Label(
+            main_frame,
+            text="Run Projects",
+            font=("Arial", 14),
+            bg="#2e2e2e",
+            fg="white"
+        ).pack(pady=10)
+
+        # Add a log viewer
+        log_text = ScrolledText(main_frame, wrap="word", font=("Arial", 10), bg="#1e1e2f", fg="white")
+        log_text.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Function to append logs to the viewer
+        def append_log(message):
+            log_text.insert("end", message + "\n")
+            log_text.see("end")
+
+        # Create a frame to hold the canvas and scrollbar
+        container_frame = tk.Frame(main_frame, bg="#2e2e2e")
+        container_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Create canvas and scrollbar
+        canvas = tk.Canvas(container_frame, bg="#2e2e2e", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(container_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#2e2e2e")
+
+        # Configure canvas and scrollbar
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Ensure scroll region updates dynamically
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        scrollable_frame.bind("<Configure>", on_frame_configure)
+
+        # Display a loading label
+        loading_label = tk.Label(
+            scrollable_frame,
+            text="Loading .csproj files...",
+            font=("Arial", 12),
+            bg="#2e2e2e",
+            fg="white"
+        )
+        loading_label.pack(pady=10)
+
+        # Dictionary to hold checkboxes
+        selected_projects = {}
+
+        # Function to populate checkboxes
+        def populate_checkboxes(csproj_files):
+            loading_label.destroy()
+            for csproj in csproj_files:
+                var = tk.BooleanVar()
+                chk = tk.Checkbutton(
+                    scrollable_frame,
+                    text=os.path.basename(csproj),
+                    variable=var,
+                    bg="#2e2e2e",
+                    fg="white",
+                    selectcolor="#4CAF50",
+                    activebackground="#4CAF50",
+                    font=("Arial", 12),
+                    anchor="w"
+                )
+                chk.pack(fill="x", pady=2, anchor="w")
+                selected_projects[csproj] = var
+
+        # Background task to fetch .csproj files
+        def fetch_csproj_files():
+            config_data = load_json(SYSTEM_CONFIG_FILE)
+            project_folder = config_data.get("project_folder", "")
+
+            if not project_folder:
+                messagebox.showerror("Error", "Project folder is not set. Please configure it.")
+                return
+
+            csproj_files = [
+                os.path.join(root, file)
+                for root, dirs, files in os.walk(project_folder)
+                for file in files
+                if file.endswith("API.csproj")
+            ]
+
+            if not csproj_files:
+                messagebox.showerror("Error", "No valid .csproj files found.")
+                return
+
+            # Populate the checkboxes on the main thread
+            main_frame.after(0, lambda: populate_checkboxes(csproj_files))
+
+        # Start the background thread
+        threading.Thread(target=fetch_csproj_files, daemon=True).start()
+
+        def run_selected_projects():
+            # Get selected projects
+            selected = [path for path, var in selected_projects.items() if var.get()]
+            if not selected:
+                messagebox.showwarning("Warning", "No projects selected.")
+                return
+
+            def run_project(csproj_path, project_dir):
+                append_log(f"Starting: {csproj_path}")
+                try:
+                    process = subprocess.Popen(
+                        ["dotnet", "run", "--project", csproj_path],
+                        cwd=project_dir,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+
+                    for line in process.stdout:
+                        append_log(f"[{csproj_path}]: {line.strip()}")
+
+                    process.wait()
+                    append_log(f"Completed: {csproj_path}")
+                except Exception as e:
+                    append_log(f"Error running {csproj_path}: {str(e)}")
+
+            # Start each project in a separate thread
+            for project in selected:
+                project_dir = os.path.dirname(project)
+                threading.Thread(target=run_project, args=(project, project_dir), daemon=True).start()
+
+        # Add Run button
+        tk.Button(
+            main_frame,
+            text="Start",
+            command=run_selected_projects,
+            font=("Arial", 12),
+            bg="#4CAF50",
+            fg="white",
+            activebackground="#45a049",
+            activeforeground="white",
+            relief="flat",
+            padx=20,
+            pady=10
+        ).pack(pady=10)
+
+
+
     # Main menu bar
     menu_bar = tk.Menu(app, bg="#333", fg="white", activebackground="#4CAF50", activeforeground="white")
 
@@ -436,6 +589,7 @@ def create_app():
     menu_bar.add_cascade(label="Control Panel", menu=control_panel_menu)
 
     menu_bar.add_command(label="Manage Environments", command=show_manage_environments, background="#333", foreground="white")
+    menu_bar.add_command(label="Start API", command=show_run_projects_screen, background="#333", foreground="white")
     menu_bar.add_command(label="Checkout Env.", command=checkout_environment_files, background="#333", foreground="white")
     menu_bar.add_command(label="Checkout CSPROJ File", command=checkout_csproj_files, background="#333", foreground="white")
     menu_bar.add_command(label="Exclude Migrations", command=exclude_migration_folders, background="#333", foreground="white")
