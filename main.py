@@ -271,8 +271,32 @@ def show_loading_screen(frame):
 
     return loading_frame, progress_bar
 
+# Hide Loading Screen
 def hide_loading_screen(loading_frame):
     loading_frame.destroy()
+
+# Open Solution File
+def open_solution(csproj_file):
+    # Navigate back one level to search for the `.sln` file
+    base_dir = os.path.dirname(csproj_file)
+    solution_file = None
+
+    for root, dirs, files in os.walk(os.path.dirname(base_dir)):
+        for file in files:
+            if file.endswith(".sln"):
+                solution_file = os.path.join(root, file)
+                break
+        if solution_file:
+            break
+
+    if solution_file:
+        try:
+            # Open the `.sln` file in Visual Studio
+            subprocess.run(['start', solution_file], shell=True, check=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open solution file: {e}")
+    else:
+        messagebox.showinfo("Not Found", "No solution file (.sln) found.")
 
 # Your existing functions
 def create_app():
@@ -482,8 +506,14 @@ def create_app():
             loading_label.destroy()
             for csproj in csproj_files:
                 var = tk.BooleanVar()
+
+                # Create a frame to hold the checkbox and button together
+                frame = tk.Frame(scrollable_frame, bg="#2e2e2e")
+                frame.pack(fill="x", pady=2, anchor="w")
+
+                # Create and pack the checkbox
                 chk = tk.Checkbutton(
-                    scrollable_frame,
+                    frame,
                     text=os.path.basename(csproj),
                     variable=var,
                     bg="#2e2e2e",
@@ -493,7 +523,22 @@ def create_app():
                     font=("Arial", 12),
                     anchor="w"
                 )
-                chk.pack(fill="x", pady=2, anchor="w")
+                chk.pack(side="left", fill="x", expand=True)
+
+                # Create and pack the button
+                btn = tk.Button(
+                    frame,
+                    text="Open SLN",
+                    command=lambda csproj=csproj: open_solution(csproj),  # Fix the late binding
+                    bg="#4CAF50",
+                    fg="white",
+                    font=("Arial", 10),
+                    padx=5,
+                    pady=2
+                )
+                btn.pack(side="right", padx=5)
+
+                # Create and pack the label for the file path
                 path_label = tk.Label(
                     scrollable_frame,
                     text=csproj,
@@ -503,6 +548,7 @@ def create_app():
                     anchor="w"
                 )
                 path_label.pack(fill="x", padx=20, pady=1, anchor="w")
+
                 selected_projects[csproj] = var
 
         # Background task to fetch .csproj files
@@ -579,8 +625,6 @@ def create_app():
             padx=20,
             pady=10
         ).pack(pady=10)
-
-
 
     # Main menu bar
     menu_bar = tk.Menu(app, bg="#333", fg="white", activebackground="#4CAF50", activeforeground="white")
