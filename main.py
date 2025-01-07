@@ -5,6 +5,7 @@ import os
 import subprocess
 import threading
 from tkinter.scrolledtext import ScrolledText
+import datetime
 
 # JSON file path
 CONFIG_FILE = "config.json"
@@ -441,15 +442,6 @@ def create_app():
             fg="white"
         ).pack(pady=10)
 
-        # Add a log viewer
-        log_text = ScrolledText(main_frame, wrap="word", font=("Arial", 10), bg="#1e1e2f", fg="white")
-        log_text.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Function to append logs to the viewer
-        def append_log(message):
-            log_text.insert("end", message + "\n")
-            log_text.see("end")
-
         # Create a frame to hold the canvas and scrollbar
         container_frame = tk.Frame(main_frame, bg="#2e2e2e")
         container_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -502,6 +494,15 @@ def create_app():
                     anchor="w"
                 )
                 chk.pack(fill="x", pady=2, anchor="w")
+                path_label = tk.Label(
+                    scrollable_frame,
+                    text=csproj,
+                    bg="#2e2e2e",
+                    fg="#AAAAAA",
+                    font=("Arial", 10, "italic"),
+                    anchor="w"
+                )
+                path_label.pack(fill="x", padx=20, pady=1, anchor="w")
                 selected_projects[csproj] = var
 
         # Background task to fetch .csproj files
@@ -517,7 +518,7 @@ def create_app():
                 os.path.join(root, file)
                 for root, dirs, files in os.walk(project_folder)
                 for file in files
-                if file.endswith("API.csproj")
+                if file.endswith("API.csproj") or file.endswith("Gateway.csproj")
             ]
 
             if not csproj_files:
@@ -537,29 +538,32 @@ def create_app():
                 messagebox.showwarning("Warning", "No projects selected.")
                 return
 
-            def run_project(csproj_path, project_dir):
-                append_log(f"Starting: {csproj_path}")
-                try:
-                    process = subprocess.Popen(
-                        ["dotnet", "run", "--project", csproj_path],
-                        cwd=project_dir,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True
-                    )
-
-                    for line in process.stdout:
-                        append_log(f"[{csproj_path}]: {line.strip()}")
-
-                    process.wait()
-                    append_log(f"Completed: {csproj_path}")
-                except Exception as e:
-                    append_log(f"Error running {csproj_path}: {str(e)}")
-
-            # Start each project in a separate thread
             for project in selected:
+                # Extract project directory and file name
                 project_dir = os.path.dirname(project)
-                threading.Thread(target=run_project, args=(project, project_dir), daemon=True).start()
+                project_name = os.path.basename(project)
+
+                # Normalize the .csproj path
+                csproj_path = os.path.join(project_dir, project_name)
+
+                # Print debugging info
+                print(f"Running project: {csproj_path}")
+                print(f"Set CWD to: {project_dir}")
+
+                try:
+                    # Execute the dotnet command with the correct cwd
+                    cmd_command = f'dotnet run --project {csproj_path}'
+    
+                    # Start the command in a new command prompt
+                    subprocess.Popen(['start', 'cmd', '/K', cmd_command], shell=True)
+                    # subprocess.Popen(["dotnet", "run", "--project", csproj_path], cwd=project_dir, shell=False)
+                    print(f"Executed successfully: {csproj_path}")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error: {e}")
+                    messagebox.showerror("Error", f"Failed to run project: {project_name}")
+
+            messagebox.showinfo("Success", "Selected projects are running.")
+
 
         # Add Run button
         tk.Button(
