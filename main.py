@@ -5,6 +5,8 @@ import os
 import subprocess
 import threading
 from tkinter.scrolledtext import ScrolledText
+import time
+import math
 
 # JSON file paths
 CONFIG_FILE = "config.json"
@@ -249,6 +251,74 @@ def restore_environments():
             show_manage_environments()  # Reload the environments in UI if necessary
     except Exception as e:
         messagebox.showerror("Error", f"Failed to restore environments: {str(e)}")
+
+def animated_stretch_figure():
+    stretch_window = tk.Toplevel()
+    stretch_window.title("Stretch Reminder")
+    stretch_window.geometry("400x400")
+    stretch_window.config(bg="#ffefd5")
+
+    tk.Label(
+        stretch_window,
+        text="Time to stretch your legs!",
+        font=("Arial", 18, "bold"),
+        bg="#ffefd5",
+        fg="#ff6347"
+    ).pack(pady=(20, 10))
+
+    canvas = tk.Canvas(stretch_window, width=350, height=350, bg="#ffefd5")
+    canvas.pack()
+
+    # Stick figure parts
+    head = canvas.create_oval(170, 50, 190, 70, fill="black")
+    body = canvas.create_line(180, 70, 180, 120, fill="black", width=2)
+    left_arm = canvas.create_line(180, 80, 150, 100, fill="black", width=2)
+    right_arm = canvas.create_line(180, 80, 210, 100, fill="black", width=2)
+    left_leg = canvas.create_line(180, 120, 160, 160, fill="black", width=2)
+    right_leg = canvas.create_line(180, 120, 200, 160, fill="black", width=2)
+
+    # Animate stretching movement
+    def animate_stretch():
+        direction = 1
+        stretch_amount = 0
+
+        while True:
+            stretch_amount += direction
+            if stretch_amount >= 20 or stretch_amount <= -20:
+                direction *= -1
+
+            # Animate legs stretching out
+            canvas.coords(left_leg, 180, 120, 160 + stretch_amount, 160 + stretch_amount)
+            canvas.coords(right_leg, 180, 120, 200 + stretch_amount, 160 + stretch_amount)
+
+            # Simulate arms raising for stretching 
+            canvas.coords(left_arm, 180, 80, 150, 80 + stretch_amount)
+            canvas.coords(right_arm, 180, 80, 210, 80 + stretch_amount)
+
+            stretch_window.update()
+            time.sleep(0.1)
+
+    threading.Thread(target=animate_stretch, daemon=True).start()
+
+    tk.Button(
+        stretch_window,
+        text="Okay!",
+        command=stretch_window.destroy,
+        bg="#ff6347",
+        fg="white",
+        font=("Arial", 12),
+        relief="flat",
+        padx=20,
+        pady=5
+    ).pack(pady=20)
+
+def schedule_stretch_reminder(interval=3600):  # Set interval as needed
+    def reminder():
+        while True:
+            time.sleep(interval)
+            animated_stretch_figure()
+
+    threading.Thread(target=reminder, daemon=True).start()
 
 def create_app():
     app = tk.Tk()
@@ -557,6 +627,7 @@ def create_app():
     main_frame = tk.Frame(app, bg="#2e2e2e")
     main_frame.pack(fill="both", expand=True)
     show_welcome_page()
+    schedule_stretch_reminder()
 
     app.mainloop()
 
