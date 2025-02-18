@@ -193,12 +193,13 @@ def select_git_path():
         save_json(SYSTEM_CONFIG_FILE, config_data)
         messagebox.showinfo("Success", f"Git Executable set to: {git_path}")
 
-def show_loading_screen(frame):
+def show_loading_screen(frame, message="Processing... Please wait."):
+    """ Display a loading message while the process runs """
     loading_frame = tk.Frame(frame, bg="#1e1e2f", width=800, height=400)
     loading_frame.place(relx=0.5, rely=0.5, anchor="center")
     tk.Label(
         loading_frame,
-        text="Please wait... Executing task...",
+        text=message,
         font=("Arial", 14),
         bg="#1e1e2f",
         fg="white"
@@ -211,6 +212,7 @@ def show_loading_screen(frame):
     return loading_frame, progress_bar
 
 def hide_loading_screen(loading_frame):
+    """ Remove the loading message after processing """
     loading_frame.destroy()
 
 def open_solution(csproj_file):
@@ -252,73 +254,73 @@ def restore_environments():
     except Exception as e:
         messagebox.showerror("Error", f"Failed to restore environments: {str(e)}")
 
-def animated_stretch_figure():
-    stretch_window = tk.Toplevel()
-    stretch_window.title("Stretch Reminder")
-    stretch_window.geometry("400x400")
-    stretch_window.config(bg="#ffefd5")
+# def animated_stretch_figure():
+#     stretch_window = tk.Toplevel()
+#     stretch_window.title("Stretch Reminder")
+#     stretch_window.geometry("400x400")
+#     stretch_window.config(bg="#ffefd5")
 
-    tk.Label(
-        stretch_window,
-        text="Time to stretch your legs!",
-        font=("Arial", 18, "bold"),
-        bg="#ffefd5",
-        fg="#ff6347"
-    ).pack(pady=(20, 10))
+#     tk.Label(
+#         stretch_window,
+#         text="Time to stretch your legs!",
+#         font=("Arial", 18, "bold"),
+#         bg="#ffefd5",
+#         fg="#ff6347"
+#     ).pack(pady=(20, 10))
 
-    canvas = tk.Canvas(stretch_window, width=350, height=350, bg="#ffefd5")
-    canvas.pack()
+#     canvas = tk.Canvas(stretch_window, width=350, height=350, bg="#ffefd5")
+#     canvas.pack()
 
-    # Stick figure parts
-    head = canvas.create_oval(170, 50, 190, 70, fill="black")
-    body = canvas.create_line(180, 70, 180, 120, fill="black", width=2)
-    left_arm = canvas.create_line(180, 80, 150, 100, fill="black", width=2)
-    right_arm = canvas.create_line(180, 80, 210, 100, fill="black", width=2)
-    left_leg = canvas.create_line(180, 120, 160, 160, fill="black", width=2)
-    right_leg = canvas.create_line(180, 120, 200, 160, fill="black", width=2)
+#     # Stick figure parts
+#     head = canvas.create_oval(170, 50, 190, 70, fill="black")
+#     body = canvas.create_line(180, 70, 180, 120, fill="black", width=2)
+#     left_arm = canvas.create_line(180, 80, 150, 100, fill="black", width=2)
+#     right_arm = canvas.create_line(180, 80, 210, 100, fill="black", width=2)
+#     left_leg = canvas.create_line(180, 120, 160, 160, fill="black", width=2)
+#     right_leg = canvas.create_line(180, 120, 200, 160, fill="black", width=2)
 
-    # Animate stretching movement
-    def animate_stretch():
-        direction = 1
-        stretch_amount = 0
+#     # Animate stretching movement
+#     def animate_stretch():
+#         direction = 1
+#         stretch_amount = 0
 
-        while True:
-            stretch_amount += direction
-            if stretch_amount >= 20 or stretch_amount <= -20:
-                direction *= -1
+#         while True:
+#             stretch_amount += direction
+#             if stretch_amount >= 20 or stretch_amount <= -20:
+#                 direction *= -1
 
-            # Animate legs stretching out
-            canvas.coords(left_leg, 180, 120, 160 + stretch_amount, 160 + stretch_amount)
-            canvas.coords(right_leg, 180, 120, 200 + stretch_amount, 160 + stretch_amount)
+#             # Animate legs stretching out
+#             canvas.coords(left_leg, 180, 120, 160 + stretch_amount, 160 + stretch_amount)
+#             canvas.coords(right_leg, 180, 120, 200 + stretch_amount, 160 + stretch_amount)
 
-            # Simulate arms raising for stretching 
-            canvas.coords(left_arm, 180, 80, 150, 80 + stretch_amount)
-            canvas.coords(right_arm, 180, 80, 210, 80 + stretch_amount)
+#             # Simulate arms raising for stretching 
+#             canvas.coords(left_arm, 180, 80, 150, 80 + stretch_amount)
+#             canvas.coords(right_arm, 180, 80, 210, 80 + stretch_amount)
 
-            stretch_window.update()
-            time.sleep(0.1)
+#             stretch_window.update()
+#             time.sleep(0.1)
 
-    threading.Thread(target=animate_stretch, daemon=True).start()
+#     threading.Thread(target=animate_stretch, daemon=True).start()
 
-    tk.Button(
-        stretch_window,
-        text="Okay!",
-        command=stretch_window.destroy,
-        bg="#ff6347",
-        fg="white",
-        font=("Arial", 12),
-        relief="flat",
-        padx=20,
-        pady=5
-    ).pack(pady=20)
+#     tk.Button(
+#         stretch_window,
+#         text="Okay!",
+#         command=stretch_window.destroy,
+#         bg="#ff6347",
+#         fg="white",
+#         font=("Arial", 12),
+#         relief="flat",
+#         padx=20,
+#         pady=5
+#     ).pack(pady=20)
 
-def schedule_stretch_reminder(interval=3600):  # Set interval as needed
-    def reminder():
-        while True:
-            time.sleep(interval)
-            animated_stretch_figure()
+# def schedule_stretch_reminder(interval=3600):  # Set interval as needed
+#     def reminder():
+#         while True:
+#             time.sleep(interval)
+#             animated_stretch_figure()
 
-    threading.Thread(target=reminder, daemon=True).start()
+#     threading.Thread(target=reminder, daemon=True).start()
 
 def create_app():
     app = tk.Tk()
@@ -458,6 +460,112 @@ def create_app():
             fg="white"
         ).pack(pady=10)
 
+        # Search Box - Top Left Corner
+        search_frame = tk.Frame(main_frame, bg="#2e2e2e")
+        search_frame.pack(side="top", anchor="nw", padx=10, pady=5)  # Top-left alignment
+
+        search_label = tk.Label(
+            search_frame,
+            text="Search APIs:",
+            font=("Arial", 10),
+            bg="#2e2e2e",
+            fg="white"
+        )
+        search_label.pack(side="left", padx=3)
+
+        search_var = tk.StringVar()
+        search_entry = tk.Entry(
+            search_frame,
+            textvariable=search_var,
+            font=("Arial", 10)
+        )
+        search_entry.pack(side="left", padx=4, fill="x", expand=True)
+        fetch_button = tk.Button(
+            search_frame, text="Fetch Origin", command=lambda: fetch_origin(), 
+            font=("Arial", 10), bg="#008CBA", fg="white", padx=10, pady=5
+        )
+        fetch_button.pack(side="right", padx=5)
+
+        update_button = tk.Button(
+            search_frame, text="Update from Develop", command=lambda: update_from_develop(), 
+            font=("Arial", 10), bg="#4CAF50", fg="white", padx=10, pady=5
+        )
+        update_button.pack(side="right", padx=5)
+
+        def fetch_origin():
+            selected = [path for path, (var, frame, path_label) in selected_projects.items() if var.get()]
+            
+            if not selected:
+                messagebox.showwarning("Warning", "No projects selected.")
+                return
+            loading_frame, progress_bar = show_loading_screen(main_frame, "Fetching origin... Please wait.")
+
+            try:
+                for project in selected:
+                    project_dir = os.path.dirname(project)
+                    project_dir = os.path.normpath(project_dir)  # Normalize slashes
+
+                    cmd_command = f'git -C "{project_dir}" fetch origin'
+                    subprocess.run(cmd_command, shell=True, check=True)
+                    print(f"Fetched origin in: {project_dir}")
+
+                    messagebox.showinfo("Success", "Fetched origin in selected projects.")
+        
+            except subprocess.CalledProcessError as e:
+                print(f"Error: {e}")
+                messagebox.showerror("Error", f"Failed to fetch origin.")
+
+            finally:
+                hide_loading_screen(loading_frame)
+
+        def update_from_develop():
+            selected = [path for path, (var, frame, path_label) in selected_projects.items() if var.get()]
+            
+            if not selected:
+                messagebox.showwarning("Warning", "No projects selected.")
+                return
+            
+            loading_frame, progress_bar = show_loading_screen(main_frame, "Updating from develop... Please wait.")
+
+            try:
+                for project in selected:
+                    project_dir = os.path.dirname(project)
+                    project_dir = os.path.normpath(project_dir)  # Normalize path (fix slashes)
+                    try:
+                        # Check for uncommitted changes
+                        status_command = f'git -C "{project_dir}" status --porcelain'
+                        result = subprocess.run(status_command, shell=True, capture_output=True, text=True)
+
+                        if result.stdout.strip():  # If there are uncommitted changes
+                            messagebox.showwarning("Warning", f"Uncommitted changes detected in: {project_dir}\nStashing changes before pull.")
+                            
+                            # Stash local changes to avoid merge conflicts
+                            stash_command = f'git -C "{project_dir}" stash push -m "Auto stash before pull"'
+                            subprocess.run(stash_command, shell=True, check=True)
+
+                        # Pull latest changes from develop
+                        pull_command = f'git -C "{project_dir}" pull origin develop'
+                        print(f"Updated from develop in: {project_dir}")
+                        subprocess.run(pull_command, shell=True, check=True)
+
+                        # Push the current branch to origin
+                        push_command = f'git -C "{project_dir}" push origin'
+                        print(f"Pushed changes to origin in: {project_dir}")
+                        subprocess.run(push_command, shell=True, check=True)
+
+                        print(f"Updated and pushed in: {project_dir}")
+
+                        # Restore stashed changes if needed
+                        unstash_command = f'git -C "{project_dir}" stash pop'
+                        subprocess.run(unstash_command, shell=True)
+                        
+                    except subprocess.CalledProcessError as e:
+                        print(f"Error: {e}")
+                        messagebox.showerror("Error", f"Failed to update from develop in: {project_dir}")
+
+                messagebox.showinfo("Success", "Updated selected projects from develop.")
+            finally:
+                    hide_loading_screen(loading_frame)
         def bind_scroll_events(target_widget, canvas):
             if target_widget.winfo_class() == 'Canvas':
                 target_widget.bind_all("<MouseWheel>", lambda event: on_mouse_wheel(event, canvas))
@@ -537,7 +645,21 @@ def create_app():
                 )
                 path_label.pack(fill="x", padx=20, pady=1, anchor="w")
 
-                selected_projects[csproj] = var
+                selected_projects[csproj] = (var, frame,path_label)  # Store var and frame in a tuple
+
+        def filter_csproj():
+            search_text = search_var.get().lower()
+            for path, (chk_var, frame,path_label) in selected_projects.items():
+                file_name = os.path.basename(path).lower()
+                full_path = path.lower()
+                if search_text in file_name or not search_text:
+                    frame.pack(fill="x", pady=2, anchor="w")  # Show matching or all if search box is empty
+                    path_label.pack(fill="x", padx=20, pady=1, anchor="w")  # Ensure the path label is visible
+                else:
+                    frame.pack_forget()  # Hide non-matching entries    
+                    path_label.pack_forget()
+
+        search_entry.bind('<KeyRelease>', lambda event: filter_csproj())
 
         def fetch_csproj_files():
             config_data = load_json(SYSTEM_CONFIG_FILE)
@@ -558,7 +680,7 @@ def create_app():
         run_in_background(fetch_csproj_files)
 
         def run_selected_projects():
-            selected = [path for path, var in selected_projects.items() if var.get()]
+            selected = [path for path, (var, frame,path_label) in selected_projects.items() if var.get()]
             if not selected:
                 messagebox.showwarning("Warning", "No projects selected.")
                 return
@@ -590,7 +712,7 @@ def create_app():
         ).pack(pady=5, side="right", padx=5)
 
         def uncheck_all():
-            for var in selected_projects.values():
+            for var, frame,path_label in selected_projects.values():
                 var.set(False)
 
         tk.Button(
@@ -627,7 +749,7 @@ def create_app():
     main_frame = tk.Frame(app, bg="#2e2e2e")
     main_frame.pack(fill="both", expand=True)
     show_welcome_page()
-    schedule_stretch_reminder()
+    # schedule_stretch_reminder()
 
     app.mainloop()
 
