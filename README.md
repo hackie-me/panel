@@ -6,6 +6,43 @@ List any dependencies and installation instructions here.
 - PyInstaller
 - Other dependencies
 
+### **Install Dependencies**
+```bash
+pip install json5 
+pip install pyinstaller 
+pip install tkinter
+pip install streamlit
+```
+
+## Instructions
+
+### **Configure**
+
+To configure the application, modify the `config.json` and `system.json` files.
+
+- `config.json`: Configuration settings for the application.
+- `system.json`: System settings for the application.
+
+### **Run**
+
+To run the application, execute the following command:
+```bash
+python main.py
+streamlit run main.py
+```
+
+### **Package**
+
+To package the application, use PyInstaller. First, ensure you have PyInstaller installed:
+```bash
+pip install pyinstaller
+```
+
+Then, run the following command to create a standalone executable:
+```bash
+pyinstaller --onefile main.py
+```
+
 ### **Build**
 
 To build the application, run the following command:
