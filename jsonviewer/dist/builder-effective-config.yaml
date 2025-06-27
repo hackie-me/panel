@@ -1,0 +1,21 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.hardik.apiconfigeditor
+productName: API Config Editor
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+portable:
+  artifactName: APIConfigEditor-Portable-${version}.exe
+files: []
+electronVersion: 22.3.27
