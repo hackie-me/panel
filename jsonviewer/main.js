@@ -55,179 +55,6 @@ app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC handlers
-ipcMain.on('select-folder', async (event) => {
-    try {
-        const result = await dialog.showOpenDialog(mainWindow, {
-            properties: ['openDirectory']
-        });
-
-        if (result.canceled) {
-            event.sender.send('folder-selected', {
-                success: false,
-                error: 'Folder selection canceled'
-            });
-            return;
-        }
-
-        const rootFolderPath = result.filePaths[0];
-
-        // Show initial loading indicator in UI
-        event.sender.send('folder-loading-start', { path: rootFolderPath });
-
-        try {
-            // Use a custom recursive directory scanning function instead of glob
-            console.log(`Starting custom recursive scan for ${rootFolderPath}`);
-
-            const appsettingsFiles = await findFilesRecursively(rootFolderPath,
-                (fileName) => fileName.startsWith('appsettings.') && fileName.endsWith('.json'));
-
-            console.log(`Found ${appsettingsFiles.length} appsettings.*.json files`);
-
-            // Process all found files
-            const files = [];
-            const processedPaths = new Set();
-
-            // Track progress
-            let processed = 0;
-            const total = appsettingsFiles.length;
-
-            for (const configFile of appsettingsFiles) {
-                processed++;
-
-                // Update progress every 5 files or at the end
-                if (processed % 5 === 0 || processed === total) {
-                    const percentage = Math.round((processed / total) * 100);
-                    event.sender.send('folder-loading-progress', {
-                        processed,
-                        total,
-                        percentage,
-                        currentDirectory: path.basename(path.dirname(configFile))
-                    });
-                }
-
-                if (processedPaths.has(configFile)) continue;
-                processedPaths.add(configFile);
-
-                const fileName = path.basename(configFile);
-                const envMatch = fileName.match(/appsettings\.(.+)\.json/i);
-                const environment = envMatch ? envMatch[1] : 'default';
-
-                // Get project info from file path
-                const relativeFilePath = path.relative(rootFolderPath, configFile);
-                const pathParts = relativeFilePath.split(path.sep);
-
-                // Check if the root folder itself is the API project
-                const rootFolderName = path.basename(rootFolderPath);
-                const isRootApiProject = rootFolderName.includes('API');
-
-                // Try to find API project in the path
-                const apiPartIndex = pathParts.findIndex(part =>
-                    part.includes('_API') || part.includes('API_') || part.toLowerCase().includes('api'));
-
-                let projectName;
-                let hierarchy = [];
-
-                if (apiPartIndex >= 0) {
-                    projectName = pathParts[apiPartIndex];
-                    hierarchy = pathParts.slice(0, apiPartIndex + 1);
-                } else if (isRootApiProject) {
-                    projectName = rootFolderName;
-                    hierarchy = [projectName];
-                } else {
-                    // Use parent folder as project name
-                    projectName = path.basename(path.dirname(configFile));
-
-                    // Build a simple hierarchy based on path
-                    const dirName = path.dirname(relativeFilePath);
-                    if (dirName && dirName !== '.') {
-                        hierarchy = dirName.split(path.sep);
-                    } else {
-                        hierarchy = [projectName];
-                    }
-                }
-
-                // Make sure hierarchy has at least one element and doesn't contain duplicates
-                if (hierarchy.length === 0) {
-                    hierarchy = [projectName];
-                }
-
-                const uniqueHierarchy = [...new Set(hierarchy)];
-
-                files.push({
-                    path: configFile,
-                    filename: fileName,
-                    environment,
-                    project: projectName,
-                    hierarchy: uniqueHierarchy
-                });
-
-                // Log processing info
-                console.log(`Processed: ${fileName}, Project: ${projectName}, Hierarchy: ${JSON.stringify(uniqueHierarchy)}`);
-            }
-
-            console.log(`Total processed files: ${files.length}`);
-
-            const folderData = {
-                path: rootFolderPath,
-                files: files
-            };
-
-            // Save to persistent storage
-            store.set('lastFolder', folderData);
-
-            event.sender.send('folder-selected', {
-                success: true,
-                ...folderData
-            });
-        } catch (error) {
-            console.error('Error finding config files:', error);
-            event.sender.send('folder-selected', {
-                success: false,
-                error: error.message
-            });
-        }
-    } catch (error) {
-        console.error('Error selecting folder:', error);
-        event.sender.send('folder-selected', {
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-// Custom recursive directory scanning function
-async function findFilesRecursively(dir, fileFilter) {
-    const result = [];
-
-    async function scanDir(currentDir) {
-        try {
-            const entries = await fsReaddir(currentDir, { withFileTypes: true });
-
-            for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-
-                if (entry.isDirectory()) {
-                    // Skip node_modules, bin, obj folders which are commonly large and not relevant
-                    if (entry.name === 'node_modules' || entry.name === 'bin' || entry.name === 'obj' || entry.name === '.git') {
-                        continue;
-                    }
-
-                    // Recursively scan subdirectory
-                    await scanDir(fullPath);
-                } else if (entry.isFile() && fileFilter(entry.name)) {
-                    result.push(fullPath);
-                }
-            }
-        } catch (error) {
-            console.error(`Error scanning directory ${currentDir}:`, error);
-        }
-    }
-
-    await scanDir(dir);
-    return result;
-}
-
 // Handle file loading
 ipcMain.on('get-file', async (event, filePath) => {
     try {
@@ -472,13 +299,49 @@ function findPropertyInJson(propertyPath, jsonContent) {
     return null;
 }
 
-// Improved helper function to parse JSON with comments and handle bad control characters
 function parseJSONWithComments(content) {
     try {
-        // Remove comments before parsing
-        let cleanContent = content
-            .replace(/\/\/.*$/gm, '') // Remove single-line comments
-            .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+        // Remove comments before parsing, but preserve URLs in strings
+        let cleanContent = content;
+
+        // First, remove multi-line comments (/* ... */)
+        cleanContent = cleanContent.replace(/\/\*[\s\S]*?\*\//g, '');
+
+        // Remove single-line comments (//) but preserve URLs in strings
+        // Process line by line to handle this properly
+        cleanContent = cleanContent.split('\n').map(line => {
+            let inString = false;
+            let escaped = false;
+            let commentStart = -1;
+
+            for (let i = 0; i < line.length - 1; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escaped = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+
+                // Only look for comments when we're not inside a string
+                if (!inString && char === '/' && nextChar === '/') {
+                    commentStart = i;
+                    break;
+                }
+            }
+
+            return commentStart >= 0 ? line.substring(0, commentStart).trimEnd() : line;
+        }).join('\n');
 
         // Handle bad control characters in JSON
         cleanContent = cleanContent
@@ -505,19 +368,63 @@ function parseJSONWithComments(content) {
                 // Ensure proper quote formatting
                 .replace(/([^\\])\\([^"\\/bfnrtu])/g, '$1$2');
 
-            return JSON.parse(aggressiveCleanContent);
+            try {
+                return JSON.parse(aggressiveCleanContent);
+            } catch (secondError) {
+                console.error('Second JSON parsing attempt failed:', secondError);
+
+                // Third attempt: Try to fix common URL-related issues that might have been broken
+                const urlFixedContent = aggressiveCleanContent
+                    // Restore common URL patterns that might have been broken
+                    .replace(/http\s*:\s*\/\s*\//g, 'http://')
+                    .replace(/https\s*:\s*\/\s*\//g, 'https://')
+                    // Fix broken URLs in strings
+                    .replace(/"([^"]*?)http\s*:\s*\/\s*\/([^"]*?)"/g, '"$1http://$2"')
+                    .replace(/"([^"]*?)https\s*:\s*\/\s*\/([^"]*?)"/g, '"$1https://$2"');
+
+                return JSON.parse(urlFixedContent);
+            }
         }
     } catch (error) {
         console.error('Error parsing JSON:', error);
 
-        // As a last resort, try a line-by-line approach
+        // As a last resort, try a line-by-line approach with URL preservation
         try {
             const lines = content.split('\n');
             const cleanedLines = lines.map(line => {
-                // Remove comments
-                const commentIndex = line.indexOf('//');
+                // Remove comments but preserve URLs in strings
+                let inString = false;
+                let escaped = false;
+                let commentIndex = -1;
+
+                for (let i = 0; i < line.length - 1; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+
+                    if (escaped) {
+                        escaped = false;
+                        continue;
+                    }
+
+                    if (char === '\\') {
+                        escaped = true;
+                        continue;
+                    }
+
+                    if (char === '"') {
+                        inString = !inString;
+                        continue;
+                    }
+
+                    // Only look for comments when we're not inside a string
+                    if (!inString && char === '/' && nextChar === '/') {
+                        commentIndex = i;
+                        break;
+                    }
+                }
+
                 if (commentIndex >= 0) {
-                    line = line.substring(0, commentIndex);
+                    line = line.substring(0, commentIndex).trimEnd();
                 }
 
                 // Clean control characters
@@ -542,7 +449,6 @@ function parseJSONWithComments(content) {
         }
     }
 }
-
 // Function to get authentication token
 async function getAuthToken() {
     console.log('Getting authentication token...');
@@ -803,12 +709,13 @@ ipcMain.handle('find-matching-files', async (event, { rootDir, fileName }) => {
             'node_modules',
             'bin',
             'obj',
-            '.git'
+            '.git',
+            'Server'
         ];
 
         // Find all matching files in both the root directory and one level up
-        const filesInRoot = await findFilesRecursively(rootDir, fileName, ignorePatterns);
-        const filesInParent = await findFilesRecursively(parentDir, fileName, ignorePatterns);
+        const filesInRoot = await findFilesRecursivelyByName(rootDir, fileName, ignorePatterns);
+        const filesInParent = await findFilesRecursivelyByName(parentDir, fileName, ignorePatterns);
 
         // Combine the results, removing duplicates
         const allFiles = [...new Set([...filesInRoot, ...filesInParent])];
@@ -821,15 +728,205 @@ ipcMain.handle('find-matching-files', async (event, { rootDir, fileName }) => {
     }
 });
 
-// Recursive function to find files with matching name
-async function findFilesRecursively(directory, targetFileName, ignorePatterns) {
+// IPC handlers
+ipcMain.on('select-folder', async (event) => {
+    try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory']
+        });
+
+        if (result.canceled) {
+            event.sender.send('folder-selected', {
+                success: false,
+                error: 'Folder selection canceled'
+            });
+            return;
+        }
+
+        const rootFolderPath = result.filePaths[0];
+
+        // Show initial loading indicator in UI
+        event.sender.send('folder-loading-start', { path: rootFolderPath });
+
+        try {
+            // Use a custom recursive directory scanning function instead of glob
+            console.log(`Starting custom recursive scan for ${rootFolderPath}`);
+
+            const ignorePatterns = [
+                'node_modules',
+                'bin',
+                'obj',
+                '.git',
+                'Server'
+            ];
+
+            // Fixed: Use the function that takes a filter function
+            const appsettingsFiles = await findFilesRecursivelyByFilter(
+                rootFolderPath,
+                (fileName) => fileName.startsWith('appsettings.') && fileName.endsWith('.json'),
+                ignorePatterns
+            );
+
+            console.log(`Found ${appsettingsFiles.length} appsettings.*.json files`);
+
+            // Process all found files
+            const files = [];
+            const processedPaths = new Set();
+
+            // Track progress
+            let processed = 0;
+            const total = appsettingsFiles.length;
+
+            for (const configFile of appsettingsFiles) {
+                processed++;
+
+                // Update progress every 5 files or at the end
+                if (processed % 5 === 0 || processed === total) {
+                    const percentage = Math.round((processed / total) * 100);
+                    event.sender.send('folder-loading-progress', {
+                        processed,
+                        total,
+                        percentage,
+                        currentDirectory: path.basename(path.dirname(configFile))
+                    });
+                }
+
+                if (processedPaths.has(configFile)) continue;
+                processedPaths.add(configFile);
+
+                const fileName = path.basename(configFile);
+                const envMatch = fileName.match(/appsettings\.(.+)\.json/i);
+                const environment = envMatch ? envMatch[1] : 'default';
+
+                // Get project info from file path
+                const relativeFilePath = path.relative(rootFolderPath, configFile);
+                const pathParts = relativeFilePath.split(path.sep);
+
+                // Check if the root folder itself is the API project
+                const rootFolderName = path.basename(rootFolderPath);
+                const isRootApiProject = rootFolderName.includes('API');
+
+                // Try to find API project in the path
+                const apiPartIndex = pathParts.findIndex(part =>
+                    part.includes('_API') || part.includes('API_') || part.toLowerCase().includes('api'));
+
+                let projectName;
+                let hierarchy = [];
+
+                if (apiPartIndex >= 0) {
+                    projectName = pathParts[apiPartIndex];
+                    hierarchy = pathParts.slice(0, apiPartIndex + 1);
+                } else if (isRootApiProject) {
+                    projectName = rootFolderName;
+                    hierarchy = [projectName];
+                } else {
+                    // Use parent folder as project name
+                    projectName = path.basename(path.dirname(configFile));
+
+                    // Build a simple hierarchy based on path
+                    const dirName = path.dirname(relativeFilePath);
+                    if (dirName && dirName !== '.') {
+                        hierarchy = dirName.split(path.sep);
+                    } else {
+                        hierarchy = [projectName];
+                    }
+                }
+
+                // Make sure hierarchy has at least one element and doesn't contain duplicates
+                if (hierarchy.length === 0) {
+                    hierarchy = [projectName];
+                }
+
+                const uniqueHierarchy = [...new Set(hierarchy)];
+
+                files.push({
+                    path: configFile,
+                    filename: fileName,
+                    environment,
+                    project: projectName,
+                    hierarchy: uniqueHierarchy
+                });
+
+                // Log processing info
+                console.log(`Processed: ${fileName}, Project: ${projectName}, Hierarchy: ${JSON.stringify(uniqueHierarchy)}`);
+            }
+
+            console.log(`Total processed files: ${files.length}`);
+
+            const folderData = {
+                path: rootFolderPath,
+                files: files
+            };
+
+            // Save to persistent storage
+            store.set('lastFolder', folderData);
+
+            event.sender.send('folder-selected', {
+                success: true,
+                ...folderData
+            });
+        } catch (error) {
+            console.error('Error finding config files:', error);
+            event.sender.send('folder-selected', {
+                success: false,
+                error: error.message
+            });
+        }
+    } catch (error) {
+        console.error('Error selecting folder:', error);
+        event.sender.send('folder-selected', {
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Function that takes a filter function (renamed to avoid collision)
+async function findFilesRecursivelyByFilter(dir, fileFilter, ignorePatterns = []) {
+    const result = [];
+
+    async function scanDir(currentDir) {
+        try {
+            // Check if current directory should be ignored
+            const currentDirName = path.basename(currentDir);
+            if (ignorePatterns.includes(currentDirName)) {
+                return;
+            }
+
+            const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+
+            for (const entry of entries) {
+                const fullPath = path.join(currentDir, entry.name);
+
+                if (entry.isDirectory()) {
+                    // Skip ignored directories
+                    if (ignorePatterns.includes(entry.name)) {
+                        continue;
+                    }
+
+                    // Recursively scan subdirectory
+                    await scanDir(fullPath);
+                } else if (entry.isFile() && fileFilter(entry.name)) {
+                    result.push(fullPath);
+                }
+            }
+        } catch (error) {
+            console.error(`Error scanning directory ${currentDir}:`, error);
+        }
+    }
+
+    await scanDir(dir);
+    return result;
+}
+
+// Function that takes a specific filename (renamed to avoid collision)
+async function findFilesRecursivelyByName(directory, targetFileName, ignorePatterns = []) {
     const results = [];
 
     // Check if directory should be ignored
-    for (const pattern of ignorePatterns) {
-        if (directory.includes(pattern)) {
-            return results;
-        }
+    const dirName = path.basename(directory);
+    if (ignorePatterns.includes(dirName)) {
+        return results;
     }
 
     try {
@@ -841,9 +938,14 @@ async function findFilesRecursively(directory, targetFileName, ignorePatterns) {
             const fullPath = path.join(directory, entry.name);
 
             if (entry.isDirectory()) {
+                // Skip ignored directories
+                if (ignorePatterns.includes(entry.name)) {
+                    continue;
+                }
+
                 try {
                     // Recursively search subdirectories
-                    const subResults = await findFilesRecursively(fullPath, targetFileName, ignorePatterns);
+                    const subResults = await findFilesRecursivelyByName(fullPath, targetFileName, ignorePatterns);
                     results.push(...subResults);
                 } catch (err) {
                     console.warn(`Error reading subdirectory ${fullPath}:`, err);
@@ -904,7 +1006,8 @@ ipcMain.handle('find-git-repositories', async (event, { rootDir }) => {
         const ignorePatterns = [
             'node_modules',
             'bin',
-            'obj'
+            'obj',
+            'Server'
         ];
 
         // Find all .git directories
