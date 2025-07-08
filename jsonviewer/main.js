@@ -709,8 +709,7 @@ ipcMain.handle('find-matching-files', async (event, { rootDir, fileName }) => {
             'node_modules',
             'bin',
             'obj',
-            '.git',
-            'Server'
+            '.git'
         ];
 
         // Find all matching files in both the root directory and one level up
@@ -756,8 +755,7 @@ ipcMain.on('select-folder', async (event) => {
                 'node_modules',
                 'bin',
                 'obj',
-                '.git',
-                'Server'
+                '.git'
             ];
 
             // Fixed: Use the function that takes a filter function
@@ -1006,8 +1004,7 @@ ipcMain.handle('find-git-repositories', async (event, { rootDir }) => {
         const ignorePatterns = [
             'node_modules',
             'bin',
-            'obj',
-            'Server'
+            'obj'
         ];
 
         // Find all .git directories
