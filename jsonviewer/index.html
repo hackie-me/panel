@@ -31,6 +31,49 @@
                         </button>
                     </div>
 
+                    <!-- Package Management Section -->
+                    <div id="packageManagementSection" class="mb-4 d-none">
+                        <hr>
+                        <h6 class="text-muted mb-3">Package Management</h6>
+
+                        <button id="validateStructureBtn" class="btn btn-outline-info btn-sm w-100 mb-2">
+                            <i class="fas fa-check-circle me-1"></i>Validate Structure
+                        </button>
+
+                        <button id="showReplacePackagesBtn" class="btn btn-outline-warning btn-sm w-100 mb-2">
+                            <i class="fas fa-exchange-alt me-1"></i>Replace Packages
+                        </button>
+
+                        <!-- Replace Packages Modal Trigger -->
+                        <div id="replacePackagesOptions" class="d-none">
+                            <div class="card border-warning mt-2">
+                                <div class="card-body p-2">
+                                    <h6 class="card-title mb-2">Replace Package References</h6>
+
+                                    <div class="mb-2">
+                                        <label class="form-label small">Select Projects:</label>
+                                        <select id="projectSelection" class="form-select form-select-sm">
+                                            <option value="all">All Projects</option>
+                                            <option value="community">Community Only</option>
+                                            <option value="apis">APIs Only</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="whatIfMode" checked>
+                                        <label class="form-check-label small" for="whatIfMode">
+                                            Simulation Mode (What-If)
+                                        </label>
+                                    </div>
+
+                                    <button id="executeReplaceBtn" class="btn btn-warning btn-sm w-100">
+                                        <i class="fas fa-play me-1"></i>Execute
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="rootPathDisplay" class="mb-3 d-none">
                         <div class="small text-muted mb-1">Current Root:</div>
                         <div class="folder-path text-truncate" id="rootPath"></div>
@@ -74,6 +117,26 @@
                 </div>
 
                 <div class="text-muted small"> Made With ❤️ By Hardik Kanjariya.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PowerShell Output Modal -->
+    <div class="modal fade" id="powershellOutputModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">PowerShell Output</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="powershellOutput" class="font-monospace small"
+                        style="max-height: 400px; overflow-y: auto; background-color: #1e1e1e; color: #ffffff; padding: 15px; border-radius: 5px; white-space: pre-wrap;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>

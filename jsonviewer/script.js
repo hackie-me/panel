@@ -14,6 +14,11 @@ const resetBtn = document.getElementById('resetBtn');
 const darkModeToggle = document.getElementById('darkModeToggle');
 const fileSearch = document.getElementById('fileSearch');
 
+// Global variables for package management
+let currentRootPath = '';
+let currentInfrastructurePath = '';
+let loadingToastElement = null;
+
 const copyPostgresBtn = document.createElement('button');
 copyPostgresBtn.id = 'copyPostgresBtn';
 copyPostgresBtn.className = 'btn btn-outline-info ms-2';
@@ -33,6 +38,23 @@ document.addEventListener('DOMContentLoaded', function () {
         discardGitBtn.title = 'Discard changes to appsettings.*.json files from Git';
         buttonContainer.appendChild(discardGitBtn);
         discardGitBtn.addEventListener('click', discardFromGit);
+    }
+
+    // Add package management event listeners
+    const validateBtn = document.getElementById('validateStructureBtn');
+    const showReplaceBtn = document.getElementById('showReplacePackagesBtn');
+    const executeBtn = document.getElementById('executeReplaceBtn');
+
+    if (validateBtn) {
+        validateBtn.addEventListener('click', validateProjectStructure);
+    }
+
+    if (showReplaceBtn) {
+        showReplaceBtn.addEventListener('click', toggleReplacePackagesOptions);
+    }
+
+    if (executeBtn) {
+        executeBtn.addEventListener('click', executeReplacePackages);
     }
 });
 
@@ -74,9 +96,230 @@ resetBtn.addEventListener('click', resetForm);
 darkModeToggle.addEventListener('click', toggleDarkMode);
 fileSearch.addEventListener('input', filterFileTree);
 
+// Package Management Functions
+function setupPackageManagement(rootPath) {
+    currentRootPath = rootPath;
+
+    // Try to find infrastructure path
+    const infraPath = findInfrastructurePath(rootPath);
+    currentInfrastructurePath = infraPath;
+
+    // Show package management section
+    const packageSection = document.getElementById('packageManagementSection');
+    if (packageSection) {
+        packageSection.classList.remove('d-none');
+    }
+
+    console.log('Package management setup:', { rootPath, infraPath });
+}
+
+function findInfrastructurePath(rootPath) {
+    // Try different possible infrastructure paths
+    const possiblePaths = [
+        path.join(rootPath, 'KLSPL.Community.Common.Infrastructure'),
+        path.join(path.dirname(rootPath), 'KLSPL.Community.Common.Infrastructure'),
+        path.join(rootPath, '..', 'KLSPL.Community.Common.Infrastructure')
+    ];
+
+    // For now, return the first possible path
+    // In a real implementation, you might want to check if these paths exist
+    return possiblePaths[0];
+}
+
+async function validateProjectStructure() {
+    if (!currentRootPath) {
+        showToast('Please select a root folder first', 'warning');
+        return;
+    }
+
+    try {
+        showLoadingToast('Validating project structure...');
+
+        const result = await ipcRenderer.invoke('validate-project-structure', {
+            projectsPath: currentRootPath,
+            infrastructurePath: currentInfrastructurePath
+        });
+
+        hideLoadingToast();
+
+        if (result.success) {
+            showPowerShellOutput('Project Structure Validation', result.output, result.errors);
+            showToast('Project structure validation completed', 'success');
+        } else {
+            showToast(`Validation failed: ${result.error}`, 'danger');
+            showPowerShellOutput('Project Structure Validation (Error)', result.output, result.errors);
+        }
+    } catch (error) {
+        hideLoadingToast();
+        console.error('Error validating project structure:', error);
+        showToast('Failed to validate project structure', 'danger');
+    }
+}
+
+function toggleReplacePackagesOptions() {
+    const optionsDiv = document.getElementById('replacePackagesOptions');
+    if (optionsDiv) {
+        if (optionsDiv.classList.contains('d-none')) {
+            optionsDiv.classList.remove('d-none');
+        } else {
+            optionsDiv.classList.add('d-none');
+        }
+    }
+}
+
+async function executeReplacePackages() {
+    if (!currentRootPath) {
+        showToast('Please select a root folder first', 'warning');
+        return;
+    }
+
+    const selectionElement = document.getElementById('projectSelection');
+    const whatIfElement = document.getElementById('whatIfMode');
+
+    if (!selectionElement || !whatIfElement) {
+        showToast('UI elements not found', 'danger');
+        return;
+    }
+
+    const selection = selectionElement.value;
+    const whatIf = whatIfElement.checked;
+
+    const confirmMessage = whatIf
+        ? `Run package replacement simulation for "${selection}" projects?`
+        : `⚠️ WARNING: This will make actual changes to your project files!\n\nReplace package references for "${selection}" projects?`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        showLoadingToast(`${whatIf ? 'Simulating' : 'Executing'} package replacement...`);
+
+        const result = await ipcRenderer.invoke('replace-package-references', {
+            projectsPath: currentRootPath,
+            infrastructurePath: currentInfrastructurePath,
+            selection: selection,
+            whatIf: whatIf
+        });
+
+        hideLoadingToast();
+
+        if (result.success) {
+            const title = whatIf ? 'Package Replacement Simulation' : 'Package Replacement Results';
+            showPowerShellOutput(title, result.output, result.errors);
+
+            const message = whatIf
+                ? 'Package replacement simulation completed'
+                : 'Package replacement completed successfully';
+            showToast(message, 'success');
+
+            // Hide the options after successful execution
+            const optionsDiv = document.getElementById('replacePackagesOptions');
+            if (optionsDiv) {
+                optionsDiv.classList.add('d-none');
+            }
+        } else {
+            showToast(`Package replacement failed: ${result.error}`, 'danger');
+            showPowerShellOutput('Package Replacement (Error)', result.output, result.errors);
+        }
+    } catch (error) {
+        hideLoadingToast();
+        console.error('Error executing package replacement:', error);
+        showToast('Failed to execute package replacement', 'danger');
+    }
+}
+
+function showPowerShellOutput(title, output, errors) {
+    const modal = document.getElementById('powershellOutputModal');
+    const modalTitle = document.querySelector('#powershellOutputModal .modal-title');
+    const outputDiv = document.getElementById('powershellOutput');
+
+    if (!modal || !modalTitle || !outputDiv) {
+        console.error('PowerShell output modal elements not found');
+        return;
+    }
+
+    modalTitle.textContent = title;
+
+    let formattedOutput = '';
+    if (output) {
+        formattedOutput += output;
+    }
+    if (errors) {
+        formattedOutput += '\n\n=== ERRORS ===\n' + errors;
+    }
+
+    outputDiv.textContent = formattedOutput || 'No output available';
+
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+// Utility functions for loading toasts
+function showLoadingToast(message) {
+    hideLoadingToast(); // Hide any existing loading toast
+
+    const toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        console.error('Toast container not found');
+        return;
+    }
+
+    const toastElement = createToastElement(message, 'info', false); // false = don't auto-hide
+
+    toastContainer.appendChild(toastElement);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    loadingToastElement = toastElement;
+}
+
+function hideLoadingToast() {
+    if (loadingToastElement) {
+        const toast = bootstrap.Toast.getInstance(loadingToastElement);
+        if (toast) {
+            toast.hide();
+        }
+        // Remove the element after hiding
+        setTimeout(() => {
+            if (loadingToastElement && loadingToastElement.parentNode) {
+                loadingToastElement.parentNode.removeChild(loadingToastElement);
+            }
+            loadingToastElement = null;
+        }, 300);
+    }
+}
+
+// Update the createToastElement function to support non-auto-hiding toasts
+function createToastElement(message, type = 'info', autoHide = true) {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+
+    if (!autoHide) {
+        toast.setAttribute('data-bs-autohide', 'false');
+    }
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${autoHide ? '' : '<i class="fas fa-spinner fa-spin me-2"></i>'}${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    return toast;
+}
+
 // IPC response listeners
 ipcRenderer.on('folder-selected', (event, data) => {
     if (data.success) {
+        // Setup package management
+        setupPackageManagement(data.path);
+
         // Update UI with selected folder
         rootPathDisplay.classList.remove('d-none');
         rootPath.textContent = data.path;
@@ -273,6 +516,9 @@ ipcRenderer.on('file-saved', (event, data) => {
 ipcRenderer.on('restore-last-folder', (event, folderData) => {
     try {
         isLoadingLastFolder = true;
+
+        // Setup package management
+        setupPackageManagement(folderData.path);
 
         // Update UI with the folder path
         rootPathDisplay.classList.remove('d-none');
@@ -566,9 +812,6 @@ function loadFile(filePath) {
 
         // Set the clicked file as active
         // We need to escape special characters in the selector
-        // const escapedPath = filePath.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'");
-        // Set the clicked file as active
-        // We need to escape special characters in the selector
         // Enhanced escaping to handle paths with URLs
         const escapedPath = filePath.replace(/\\/g, '\\\\')
             .replace(/"/g, '\\"')
@@ -697,6 +940,66 @@ function renderObjectField(container, label, value, path, depth) {
     container.appendChild(fieldset);
 
     renderJsonForm(value, nestedContainer, path, depth + 1);
+}
+
+// Check if a value is encrypted by looking for the property name
+function isEncryptedField(key) {
+    return key === 'AppSettingvalue';
+}
+
+// Render field for string values with encryption support
+function renderStringField(container, label, value, path) {
+    const isLongText = value && value.length > 100;
+    const isEncrypted = isEncryptedField(label);
+
+    // Escape HTML in value to prevent XSS
+    const escapedValue = String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    if (isLongText) {
+        container.innerHTML = `
+            <label for="${path}" class="form-label">${label}</label>
+            <div class="field-actions">
+                ${isEncrypted ? `
+                <button type="button" class="btn btn-sm btn-outline-info me-1 decrypt-btn" data-path="${path}">
+                    <i class="fas fa-lock-open"></i>
+                </button>` : ''}
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyValue('${path}')">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <textarea id="${path}" name="${path}" class="form-control" rows="3" data-type="string">${escapedValue}</textarea>
+        `;
+    } else {
+        container.innerHTML = `
+            <label for="${path}" class="form-label">${label}</label>
+            <div class="field-actions">
+                ${isEncrypted ? `
+                <button type="button" class="btn btn-sm btn-outline-info me-1 decrypt-btn" data-path="${path}">
+                    <i class="fas fa-lock-open"></i>
+                </button>` : ''}
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyValue('${path}')">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <input type="text" id="${path}" name="${path}" class="form-control" value="${escapedValue}" data-type="string">
+        `;
+    }
+
+    // Add event listener for decrypt button if this is an encrypted field
+    if (isEncrypted) {
+        const decryptBtn = container.querySelector('.decrypt-btn');
+        if (decryptBtn) {
+            decryptBtn.addEventListener('click', () => {
+                const inputElement = document.getElementById(path);
+                openEncryptionModal(path, inputElement.value);
+            });
+        }
+    }
 }
 
 // Copy field value to clipboard
@@ -887,14 +1190,6 @@ function getEnvironmentClass(env) {
     if (envLower === 'staging' || envLower === 'uat') return 'staging';
     if (envLower === 'test') return 'test';
     return 'dev'; // Default
-}
-
-// Make function available globally
-window.copyValue = copyValue;
-
-// Check if a value is encrypted by looking for the property name
-function isEncryptedField(key) {
-    return key === 'AppSettingvalue';
 }
 
 // Update the openEncryptionModal function to render the decrypted JSON as form fields
@@ -1319,76 +1614,6 @@ async function openEncryptionModal(path, value) {
     } catch (error) {
         console.error('Error opening encryption modal:', error);
         showToast('Error opening encryption modal', 'error');
-    }
-}
-
-// Make sure to add copyValue to window scope
-window.copyValue = function (elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-
-    // Copy value to clipboard
-    navigator.clipboard.writeText(element.value)
-        .then(() => {
-            showToast('Value copied to clipboard', 'info');
-        })
-        .catch(err => {
-            console.error('Failed to copy value:', err);
-        });
-};
-
-// Now update the renderStringField function to add decrypt button for encrypted fields
-function renderStringField(container, label, value, path) {
-    const isLongText = value && value.length > 100;
-    const isEncrypted = isEncryptedField(label);
-
-    // Escape HTML in value to prevent XSS
-    const escapedValue = String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-
-    if (isLongText) {
-        container.innerHTML = `
-            <label for="${path}" class="form-label">${label}</label>
-            <div class="field-actions">
-                ${isEncrypted ? `
-                <button type="button" class="btn btn-sm btn-outline-info me-1 decrypt-btn" data-path="${path}">
-                    <i class="fas fa-lock-open"></i>
-                </button>` : ''}
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyValue('${path}')">
-                    <i class="fas fa-copy"></i>
-                </button>
-            </div>
-            <textarea id="${path}" name="${path}" class="form-control" rows="3" data-type="string">${escapedValue}</textarea>
-        `;
-    } else {
-        container.innerHTML = `
-            <label for="${path}" class="form-label">${label}</label>
-            <div class="field-actions">
-                ${isEncrypted ? `
-                <button type="button" class="btn btn-sm btn-outline-info me-1 decrypt-btn" data-path="${path}">
-                    <i class="fas fa-lock-open"></i>
-                </button>` : ''}
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyValue('${path}')">
-                    <i class="fas fa-copy"></i>
-                </button>
-            </div>
-            <input type="text" id="${path}" name="${path}" class="form-control" value="${escapedValue}" data-type="string">
-        `;
-    }
-
-    // Add event listener for decrypt button if this is an encrypted field
-    if (isEncrypted) {
-        const decryptBtn = container.querySelector('.decrypt-btn');
-        if (decryptBtn) {
-            decryptBtn.addEventListener('click', () => {
-                const inputElement = document.getElementById(path);
-                openEncryptionModal(path, inputElement.value);
-            });
-        }
     }
 }
 
@@ -2076,24 +2301,18 @@ async function discardFromGit() {
             // Try to find Git repository in parent directories using direct directory listing
             let checkDir = currentDir;
             for (let i = 0; i < 5; i++) {
-                const dirs = await fs.promises.readdir(checkDir, { withFileTypes: true });
+                const dirs = await ipcRenderer.invoke('get-directory-files', checkDir);
 
-                // Check if any directory is a Git repository
-                for (const dir of dirs) {
-                    if (dir.isDirectory()) {
-                        const fullPath = path.join(checkDir, dir.name);
-                        const gitDir = path.join(fullPath, '.git');
-
-                        try {
-                            const gitStats = await fs.promises.stat(gitDir);
-                            if (gitStats.isDirectory()) {
-                                console.log(`Found Git repository at: ${fullPath}`);
-                                // Proceed with this repository
-                                await proceedWithDiscard([fullPath]);
-                                return;
-                            }
-                        } catch (error) {
-                            // .git directory doesn't exist here
+                if (dirs.success) {
+                    // Check if any directory is a Git repository
+                    for (const file of dirs.files) {
+                        const fileName = path.basename(file);
+                        if (fileName === '.git') {
+                            const fullPath = path.dirname(file);
+                            console.log(`Found Git repository at: ${fullPath}`);
+                            // Proceed with this repository
+                            await proceedWithDiscard([fullPath]);
+                            return;
                         }
                     }
                 }
@@ -2300,19 +2519,20 @@ async function findGitRepository(startDir) {
     // Look up to 10 levels up
     for (let i = 0; i < 10; i++) {
         try {
-            const gitDir = path.join(currentDir, '.git');
-            console.log(`Checking for .git directory at: ${gitDir}`);
+            console.log(`Checking for Git repository at: ${currentDir}`);
 
-            // Check if .git directory exists
-            try {
-                const stats = await fs.promises.stat(gitDir);
-                if (stats.isDirectory()) {
+            // Check if .git directory exists using IPC
+            const dirFiles = await ipcRenderer.invoke('get-directory-files', currentDir);
+
+            if (dirFiles.success) {
+                const hasGitDir = dirFiles.files.some(file =>
+                    path.basename(file) === '.git'
+                );
+
+                if (hasGitDir) {
                     console.log(`Git repository found at: ${currentDir}`);
                     return currentDir; // Found the Git repository
                 }
-            } catch (error) {
-                // .git directory doesn't exist at this level
-                console.log(`.git directory not found at: ${gitDir}`);
             }
 
             // Go up one level
@@ -2542,3 +2762,18 @@ function showFileDiscardDialog(title, message, files) {
         });
     });
 }
+
+// Make sure to add copyValue to window scope
+window.copyValue = function (elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    // Copy value to clipboard
+    navigator.clipboard.writeText(element.value)
+        .then(() => {
+            showToast('Value copied to clipboard', 'info');
+        })
+        .catch(err => {
+            console.error('Failed to copy value:', err);
+        });
+};
