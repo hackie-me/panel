@@ -1,54 +1,22 @@
-## Prerequisites
+# JSON Configuration Editor
 
-List any dependencies and installation instructions here.
+A modern web application for editing JSON configuration files with direct server-side updates.
 
-- Python 3.x
-- PyInstaller
-- Other dependencies
+## Features
 
-### **Install Dependencies**
-```bash
-pip install json5 
-pip install pyinstaller 
-pip install tkinter
-pip install streamlit
-```
+- Load and edit JSON configuration files directly from the server
+- Modern, responsive UI with Bootstrap 5
+- Direct file updates on the server (no download & replace needed)
+- File explorer sidebar for easy navigation
+- Support for nested objects, arrays, and different data types
+- Reset functionality to revert changes
+- Visual feedback with toast notifications
 
-## Instructions
+## Setup and Installation
 
-### **Configure**
+1. Make sure you have Node.js installed (v14 or higher)
 
-To configure the application, modify the `config.json` and `system.json` files.
-
-- `config.json`: Configuration settings for the application.
-- `system.json`: System settings for the application.
-
-### **Run**
-
-To run the application, execute the following command:
-```bash
-python main.py
-streamlit run main.py
-```
-
-### **Package**
-
-To package the application, use PyInstaller. First, ensure you have PyInstaller installed:
-```bash
-pip install pyinstaller
-```
-
-Then, run the following command to create a standalone executable:
-```bash
-pyinstaller --onefile main.py
-```
-
-### **Build**
-
-To build the application, run the following command:
-python -m PyInstaller --onefile --windowed --add-data "config.json;." --add-data "system.json;." main.py
-
-### **Run**
-
-run the application using:
-py FileName.py
+2. Install dependencies:
+npm install 
+npm start
+npm run build

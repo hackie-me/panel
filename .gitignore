@@ -1,7 +1,4 @@
-node_modules
-*-lock.json
-*.exe
-/build
-/dist
-*.spec
-/dist
+/apicheck/node_modules
+/encryption/node_modules
+/node_modules
+/jsonviewer/dist

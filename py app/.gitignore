@@ -1,0 +1,7 @@
+node_modules
+*-lock.json
+*.exe
+/build
+/dist
+*.spec
+/dist
