@@ -1,12 +1,18 @@
 {
     "name": "api-config-editor",
-    "version": "1.0.4",
-    "description": "A tool for editing API configuration files across multiple projects",
+    "version": "1.0.5",
+    "description": "A tool for editing API configuration files across multiple projects with PowerShell package management",
     "main": "main.js",
+    "author": "Hardik Kanjariya",
+    "license": "MIT",
     "scripts": {
         "start": "electron .",
+        "dev": "electron . --dev",
         "build": "electron-builder --win",
-        "pack": "electron-packager . APIConfigEditor --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite"
+        "build-all": "electron-builder --win --x64 --ia32",
+        "pack": "electron-packager . APIConfigEditor --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite",
+        "clean": "rimraf dist",
+        "prebuild": "npm run clean"
     },
     "dependencies": {
         "electron-store": "^8.1.0",
@@ -16,14 +22,40 @@
     "devDependencies": {
         "electron": "^22.0.0",
         "electron-builder": "^26.0.12",
-        "electron-packager": "^17.1.1"
+        "electron-packager": "^17.1.1",
+        "rimraf": "^3.0.2"
     },
     "build": {
         "appId": "com.hardik.apiconfigeditor",
         "productName": "API Config Editor",
+        "copyright": "Copyright © 2025 Hardik Kanjariya",
         "directories": {
-            "output": "dist"
+            "output": "dist",
+            "buildResources": "build"
         },
+        "files": [
+            "**/*",
+            "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+            "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+            "!**/node_modules/*.d.ts",
+            "!**/node_modules/.bin",
+            "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+            "!.editorconfig",
+            "!**/._*",
+            "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+            "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+            "!**/{appveyor.yml,.travis.yml,circle.yml}",
+            "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}",
+            "!dist/**/*",
+            "!README.md",
+            "powershell-scripts.js"
+        ],
+        "extraResources": [
+            {
+                "from": "powershell-scripts.js",
+                "to": "powershell-scripts.js"
+            }
+        ],
         "win": {
             "target": [
                 {
@@ -38,15 +70,45 @@
                         "x64"
                     ]
                 }
-            ]
+            ],
+            "icon": "icon.ico",
+            "requestedExecutionLevel": "requireAdministrator",
+            "artifactName": "${productName}-${version}-${arch}.${ext}"
         },
         "nsis": {
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
-            "createDesktopShortcut": true
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "API Config Editor",
+            "installerIcon": "icon.ico",
+            "uninstallerIcon": "icon.ico",
+            "installerHeaderIcon": "icon.ico",
+            "deleteAppDataOnUninstall": false,
+            "runAfterFinish": true,
+            "menuCategory": "Development Tools"
         },
         "portable": {
-            "artifactName": "APIConfigEditor-Portable-${version}.exe"
-        }
+            "artifactName": "APIConfigEditor-Portable-${version}-${arch}.exe"
+        },
+        "publish": null
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hardikkanjariya/api-config-editor.git"
+    },
+    "keywords": [
+        "electron",
+        "api",
+        "configuration",
+        "editor",
+        "powershell",
+        "package-management",
+        "json",
+        "appsettings"
+    ],
+    "engines": {
+        "node": ">=16.0.0",
+        "npm": ">=8.0.0"
     }
 }

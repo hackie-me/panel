@@ -5,9 +5,12 @@ const Store = require('electron-store');
 const util = require('util');
 const https = require('https');
 const FormData = require('form-data');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const execAsync = util.promisify(exec);
 const { shell } = require('electron');
+
+const os = require('os');
+const POWERSHELL_SCRIPTS = require('./powershell-scripts');
 
 // Promise-based versions of callbacks
 const fsReadFile = util.promisify(fs.readFile);
@@ -1243,3 +1246,221 @@ ipcMain.handle('read-file', async (event, { filePath }) => {
     }
 });
 
+// Handler to validate project structure
+ipcMain.handle('validate-project-structure', async (event, { projectsPath, infrastructurePath }) => {
+    try {
+        console.log(`Validating project structure for: ${projectsPath}`);
+
+        // Create the PowerShell script with parameters
+        const script = POWERSHELL_SCRIPTS.validateStructure;
+        const scriptWithParams = `${script}`;
+
+        // Execute PowerShell script
+        const result = await executePowerShellScript(scriptWithParams, [
+            `-ProjectsPath "${projectsPath}"`,
+            `-InfrastructurePath "${infrastructurePath}"`
+        ]);
+
+        return {
+            success: true,
+            output: result.stdout,
+            errors: result.stderr
+        };
+    } catch (error) {
+        console.error('Error validating project structure:', error);
+        return {
+            success: false,
+            error: String(error.message || 'Unknown error'),
+            output: error.stdout || '',
+            errors: error.stderr || ''
+        };
+    }
+});
+
+// Handler to replace package references
+ipcMain.handle('replace-package-references', async (event, { projectsPath, infrastructurePath, selection = 'all', whatIf = false }) => {
+    try {
+        console.log(`Replacing package references for: ${projectsPath}, selection: ${selection}, whatIf: ${whatIf}`);
+
+        // Create the PowerShell script with parameters
+        const script = POWERSHELL_SCRIPTS.replacePackageReferences;
+
+        const params = [
+            `-ProjectsPath "${projectsPath}"`,
+            `-InfrastructurePath "${infrastructurePath}"`
+        ];
+
+        if (whatIf) {
+            params.push('-WhatIf');
+        }
+
+        // Execute PowerShell script with selection as argument
+        const result = await executePowerShellScript(script, params, [selection]);
+
+        return {
+            success: true,
+            output: result.stdout,
+            errors: result.stderr
+        };
+    } catch (error) {
+        console.error('Error replacing package references:', error);
+        return {
+            success: false,
+            error: String(error.message || 'Unknown error'),
+            output: error.stdout || '',
+            errors: error.stderr || ''
+        };
+    }
+});
+
+// Handler to get available directories for selection
+ipcMain.handle('get-available-directories', async (event, { projectsPath }) => {
+    try {
+        console.log(`Getting available directories for: ${projectsPath}`);
+
+        // Create a simple script to get directories
+        const script = `
+param([string]$ProjectsPath)
+
+$directories = @()
+
+$communityPath = Join-Path $ProjectsPath "Community"
+if (Test-Path $communityPath) {
+    $directories += @{
+        Index = 0
+        Name = "Community"
+        Path = $communityPath
+        Type = "Community"
+    }
+}
+
+$apiDirectories = @(
+    "KLSPL.Community.EDINotification.API", "KLSPL.Community.Export.API", 
+    "KLSPL.Community.Gateway.API", "KLSPL.Community.Hangfire.API",
+    "KLSPL.Community.Import.API", "KLSPL.Community.LCCT.API",
+    "KLSPL.Community.Master.API", "KLSPL.Community.Passenger.API",
+    "KLSPL.Community.PCS.API", "KLSPL.Community.Tariff.API",
+    "KLSPL.Community.TSM.API", "KLSPL.Community.WorkFlow.API"
+)
+
+$index = 1
+foreach ($apiDir in $apiDirectories) {
+    $fullPath = Join-Path $ProjectsPath $apiDir
+    if (Test-Path $fullPath) {
+        $directories += @{
+            Index = $index
+            Name = $apiDir
+            Path = $fullPath
+            Type = "API"
+        }
+        $index++
+    }
+}
+
+# Output as JSON
+$directories | ConvertTo-Json -Depth 3
+`;
+
+        const result = await executePowerShellScript(script, [`-ProjectsPath "${projectsPath}"`]);
+
+        let directories = [];
+        if (result.stdout.trim()) {
+            try {
+                directories = JSON.parse(result.stdout);
+                if (!Array.isArray(directories)) {
+                    directories = [directories];
+                }
+            } catch (parseError) {
+                console.error('Error parsing directories JSON:', parseError);
+                directories = [];
+            }
+        }
+
+        return {
+            success: true,
+            directories: directories
+        };
+    } catch (error) {
+        console.error('Error getting available directories:', error);
+        return {
+            success: false,
+            error: String(error.message || 'Unknown error'),
+            directories: []
+        };
+    }
+});
+
+// Helper function to execute PowerShell scripts
+async function executePowerShellScript(scriptContent, parameters = [], arguments = []) {
+    return new Promise((resolve, reject) => {
+        // Create a temporary script content with parameters
+        let fullScript = scriptContent;
+
+        // Add parameter execution if provided
+        if (parameters.length > 0) {
+            fullScript = `${scriptContent}\n\n# Execute with parameters\n`;
+            if (arguments.length > 0) {
+                fullScript += `Main ${arguments.map(arg => `"${arg}"`).join(' ')}`;
+            }
+        }
+
+        // Determine PowerShell executable
+        const psExecutable = os.platform() === 'win32' ? 'powershell.exe' : 'pwsh';
+
+        // Prepare PowerShell command
+        const psArgs = [
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-Command', fullScript
+        ];
+
+        // Add parameters to the command
+        if (parameters.length > 0) {
+            psArgs.push(...parameters);
+        }
+
+        console.log('Executing PowerShell script...');
+        console.log('Parameters:', parameters);
+        console.log('Arguments:', arguments);
+
+        const process = spawn(psExecutable, psArgs, {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: true,
+            encoding: 'utf8'
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        process.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        process.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        process.on('close', (code) => {
+            console.log(`PowerShell process exited with code: ${code}`);
+            console.log('STDOUT:', stdout);
+            if (stderr) {
+                console.log('STDERR:', stderr);
+            }
+
+            if (code === 0) {
+                resolve({ stdout, stderr, exitCode: code });
+            } else {
+                const error = new Error(`PowerShell script failed with exit code ${code}`);
+                error.stdout = stdout;
+                error.stderr = stderr;
+                error.exitCode = code;
+                reject(error);
+            }
+        });
+
+        process.on('error', (error) => {
+            console.error('PowerShell process error:', error);
+            reject(error);
+        });
+    });
+}
