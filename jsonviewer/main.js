@@ -8,6 +8,7 @@ const FormData = require('form-data');
 const { exec, spawn } = require('child_process');
 const execAsync = util.promisify(exec);
 const { shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 
 const os = require('os');
 const POWERSHELL_SCRIPTS = require('./powershell-scripts');
@@ -51,6 +52,21 @@ app.whenReady().then(() => {
 
     app.on('activate', function () {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+
+    app.on('ready', () => {
+        autoUpdater.checkForUpdatesAndNotify();
+
+        autoUpdater.on('update-downloaded', (info) => {
+            dialog.showMessageBox({
+                type: 'info',
+                title: 'Update Available',
+                message: 'A new version has been downloaded. Restart the app to apply the update?',
+                buttons: ['Restart', 'Later']
+            }).then(result => {
+                if (result.response === 0) autoUpdater.quitAndInstall();
+            });
+        });
     });
 });
 
