@@ -1,6 +1,6 @@
 {
     "name": "api-config-editor",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "A tool for editing API configuration files across multiple projects with PowerShell package management",
     "main": "main.js",
     "author": "Hardik Kanjariya",
