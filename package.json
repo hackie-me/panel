@@ -54,7 +54,7 @@
         "publish": [
             {
                 "provider": "github",
-                "owner": "hackie-me",
+                "owner": "hardikkanajariya",
                 "repo": "panel"
             }
         ],
