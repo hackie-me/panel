@@ -10,7 +10,7 @@
         "dev": "electron . --dev",
         "build": "electron-builder --win",
         "build-all": "electron-builder --win --x64 --ia32",
-        "pack": "electron-packager . APIConfigEditor --platform=win32 --arch=x64 --icon=icon.ico --out=dist --overwrite",
+        "pack": "electron-packager . APIConfigEditor --platform=win32 --arch=x64 --out=dist --overwrite",
         "clean": "rimraf dist",
         "prebuild": "npm run clean"
     },
@@ -49,49 +49,7 @@
             "!dist/**/*",
             "!README.md",
             "powershell-scripts.js"
-        ],
-        "extraResources": [
-            {
-                "from": "powershell-scripts.js",
-                "to": "powershell-scripts.js"
-            }
-        ],
-        "win": {
-            "target": [
-                {
-                    "target": "nsis",
-                    "arch": [
-                        "x64"
-                    ]
-                },
-                {
-                    "target": "portable",
-                    "arch": [
-                        "x64"
-                    ]
-                }
-            ],
-            "icon": "icon.ico",
-            "requestedExecutionLevel": "requireAdministrator",
-            "artifactName": "${productName}-${version}-${arch}.${ext}"
-        },
-        "nsis": {
-            "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
-            "shortcutName": "API Config Editor",
-            "installerIcon": "icon.ico",
-            "uninstallerIcon": "icon.ico",
-            "installerHeaderIcon": "icon.ico",
-            "deleteAppDataOnUninstall": false,
-            "runAfterFinish": true,
-            "menuCategory": "Development Tools"
-        },
-        "portable": {
-            "artifactName": "APIConfigEditor-Portable-${version}-${arch}.exe"
-        },
-        "publish": null
+        ]
     },
     "repository": {
         "type": "git",
