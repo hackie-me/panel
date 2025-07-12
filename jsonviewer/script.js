@@ -184,14 +184,64 @@ async function executeReplacePackages() {
     const selection = selectionElement.value;
     const whatIf = whatIfElement.checked;
 
-    const confirmMessage = whatIf
-        ? `Run package replacement simulation for "${selection}" projects?`
-        : `⚠️ WARNING: This will make actual changes to your project files!\n\nReplace package references for "${selection}" projects?`;
+    // If user selected "custom", show the directory selection dialog
+    if (selection === 'custom') {
+        try {
+            // Get available directories first
+            const directoriesResult = await ipcRenderer.invoke('get-available-directories', {
+                projectsPath: currentRootPath
+            });
 
-    if (!confirm(confirmMessage)) {
-        return;
+            if (!directoriesResult.success || directoriesResult.directories.length === 0) {
+                showToast('No directories found for selection', 'warning');
+                return;
+            }
+
+            // Show directory selection dialog
+            const selectedDirectories = await showDirectorySelectionDialog(
+                'Select Projects to Update',
+                'Choose which projects you want to update:',
+                directoriesResult.directories
+            );
+
+            if (!selectedDirectories || selectedDirectories.length === 0) {
+                showToast('No directories selected', 'info');
+                return;
+            }
+
+            // Convert selected directories to indices string
+            const selectedIndices = selectedDirectories.map(dir => dir.Index).join(',');
+
+            const confirmMessage = whatIf
+                ? `Run package replacement simulation for ${selectedDirectories.length} selected projects?`
+                : `⚠️ WARNING: This will make actual changes to your project files!\n\nReplace package references for ${selectedDirectories.length} selected projects?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Execute with the selected indices
+            await executePackageReplacement(selectedIndices, whatIf);
+        } catch (error) {
+            console.error('Error in custom directory selection:', error);
+            showToast('Error selecting directories', 'danger');
+        }
+    } else {
+        // Standard selection (all, community, apis)
+        const confirmMessage = whatIf
+            ? `Run package replacement simulation for "${selection}" projects?`
+            : `⚠️ WARNING: This will make actual changes to your project files!\n\nReplace package references for "${selection}" projects?`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        await executePackageReplacement(selection, whatIf);
     }
+}
 
+// Helper function to execute the package replacement
+async function executePackageReplacement(selection, whatIf) {
     try {
         showLoadingToast(`${whatIf ? 'Simulating' : 'Executing'} package replacement...`);
 
@@ -227,6 +277,126 @@ async function executeReplacePackages() {
         console.error('Error executing package replacement:', error);
         showToast('Failed to execute package replacement', 'danger');
     }
+}
+
+// Function to show directory selection dialog
+function showDirectorySelectionDialog(title, message, directories) {
+    return new Promise((resolve) => {
+        // Build the list of directories with checkboxes
+        let directoryListHtml = '';
+        directories.forEach((directory) => {
+            const displayName = directory.Name;
+            const directoryType = directory.Type || 'Unknown';
+            const typeClass = directoryType === 'Community' ? 'text-primary' : 'text-secondary';
+
+            directoryListHtml += `
+                <div class="form-check mb-2 d-flex align-items-center">
+                    <input class="form-check-input" type="checkbox" value="${directory.Index}" id="dir-${directory.Index}">
+                    <label class="form-check-label flex-grow-1 ms-2" for="dir-${directory.Index}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>${displayName}</span>
+                            <span class="badge bg-light ${typeClass} ms-2">${directoryType}</span>
+                        </div>
+                        <small class="text-muted">${directory.Path}</small>
+                    </label>
+                </div>
+            `;
+        });
+
+        // Create the dialog HTML
+        const dialogHtml = `
+            <div class="modal fade" id="directorySelectionDialog" tabindex="-1" aria-labelledby="directorySelectionDialogLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="directorySelectionDialogLabel">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>${message}</p>
+                            <div class="directory-selection-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">
+                                ${directoryListHtml}
+                            </div>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAllDirsBtn">Select All</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="deselectAllDirsBtn">Deselect All</button>
+                                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="selectCommunityBtn">Community Only</button>
+                                <button type="button" class="btn btn-sm btn-outline-info ms-2" id="selectApisBtn">APIs Only</button>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelDirSelectionBtn">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="confirmDirSelectionBtn">Continue</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add the dialog to the document
+        const dialogContainer = document.createElement('div');
+        dialogContainer.innerHTML = dialogHtml;
+        document.body.appendChild(dialogContainer);
+
+        // Initialize the modal
+        const modalElement = document.getElementById('directorySelectionDialog');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        // Add event listeners for the buttons
+        document.getElementById('selectAllDirsBtn').addEventListener('click', () => {
+            document.querySelectorAll('.directory-selection-list input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        });
+
+        document.getElementById('deselectAllDirsBtn').addEventListener('click', () => {
+            document.querySelectorAll('.directory-selection-list input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        });
+
+        document.getElementById('selectCommunityBtn').addEventListener('click', () => {
+            document.querySelectorAll('.directory-selection-list input[type="checkbox"]').forEach(checkbox => {
+                const index = parseInt(checkbox.value);
+                const directory = directories.find(d => d.Index === index);
+                checkbox.checked = directory && directory.Type === 'Community';
+            });
+        });
+
+        document.getElementById('selectApisBtn').addEventListener('click', () => {
+            document.querySelectorAll('.directory-selection-list input[type="checkbox"]').forEach(checkbox => {
+                const index = parseInt(checkbox.value);
+                const directory = directories.find(d => d.Index === index);
+                checkbox.checked = directory && directory.Type === 'API';
+            });
+        });
+
+        document.getElementById('cancelDirSelectionBtn').addEventListener('click', () => {
+            modal.hide();
+            resolve([]);
+        });
+
+        document.getElementById('confirmDirSelectionBtn').addEventListener('click', () => {
+            // Get all selected directories
+            const selectedDirectories = [];
+            document.querySelectorAll('.directory-selection-list input[type="checkbox"]:checked').forEach(checkbox => {
+                const index = parseInt(checkbox.value);
+                const directory = directories.find(d => d.Index === index);
+                if (directory) {
+                    selectedDirectories.push(directory);
+                }
+            });
+
+            modal.hide();
+            resolve(selectedDirectories);
+        });
+
+        // Cleanup when the modal is hidden
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(dialogContainer);
+        });
+    });
 }
 
 function showPowerShellOutput(title, output, errors) {

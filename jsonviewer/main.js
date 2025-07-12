@@ -1408,12 +1408,79 @@ async function executePowerShellScript(scriptContent, parameters = [], arguments
         const tempDir = os.tmpdir();
         const tempScriptPath = path.join(tempDir, `temp_script_${Date.now()}.ps1`);
 
-        // Create the full script with parameters and function call
+        // Start with the original script content without modification
         let fullScript = scriptContent;
 
-        // Add the main function call at the end
+        // Add the main function call at the end based on arguments
         if (arguments.length > 0) {
-            fullScript += `\n\nMain -Selection "${arguments[0]}"`;
+            const selection = arguments[0];
+
+            // Check if the argument is a comma-separated list of indices
+            if (selection.match(/^\d+(,\d+)*$/)) {
+                // It's a list of indices, create a custom selection handler
+                fullScript += `\n\n# Custom directory selection\n`;
+                fullScript += `function Select-CustomDirectories {\n`;
+                fullScript += `    param([array]$AllDirectories, [string]$Indices)\n`;
+                fullScript += `    \n`;
+                fullScript += `    $selectedIndices = $Indices -split ',' | ForEach-Object { [int]$_ }\n`;
+                fullScript += `    $selectedDirectories = @()\n`;
+                fullScript += `    \n`;
+                fullScript += `    foreach ($index in $selectedIndices) {\n`;
+                fullScript += `        if ($index -ge 0 -and $index -lt $AllDirectories.Count) {\n`;
+                fullScript += `            $selectedDirectories += $AllDirectories[$index]\n`;
+                fullScript += `            Write-ColorOutput "Selected: $($AllDirectories[$index].Name)" "Green"\n`;
+                fullScript += `        }\n`;
+                fullScript += `    }\n`;
+                fullScript += `    \n`;
+                fullScript += `    return $selectedDirectories\n`;
+                fullScript += `}\n`;
+                fullScript += `\n`;
+                fullScript += `# Modified Main function to use custom selection\n`;
+                fullScript += `function Main-Custom {\n`;
+                fullScript += `    Write-ColorOutput "KLSPL Package Reference Replacement Tool" "White"\n`;
+                fullScript += `    Write-ColorOutput "========================================" "White"\n`;
+                fullScript += `    \n`;
+                fullScript += `    if ($WhatIf) {\n`;
+                fullScript += `        Write-ColorOutput "Mode: SIMULATION" "Yellow"\n`;
+                fullScript += `    } else {\n`;
+                fullScript += `        Write-ColorOutput "Mode: MAKING ACTUAL CHANGES" "Red"\n`;
+                fullScript += `    }\n`;
+                fullScript += `    \n`;
+                fullScript += `    # Get infrastructure projects\n`;
+                fullScript += `    $infraProjects = Get-InfrastructureProjects\n`;
+                fullScript += `    $packageMapping = Create-PackageMapping -InfraProjects $infraProjects\n`;
+                fullScript += `    \n`;
+                fullScript += `    # Get and select directories\n`;
+                fullScript += `    $allDirectories = Get-AllDirectories\n`;
+                fullScript += `    $selectedDirectories = Select-CustomDirectories -AllDirectories $allDirectories -Indices "${selection}"\n`;
+                fullScript += `    \n`;
+                fullScript += `    # Process each directory\n`;
+                fullScript += `    $allInfraProjects = @()\n`;
+                fullScript += `    foreach ($directory in $selectedDirectories) {\n`;
+                fullScript += `        $infraProjects = Process-Directory -Directory $directory -PackageMapping $packageMapping\n`;
+                fullScript += `        $allInfraProjects += $infraProjects\n`;
+                fullScript += `    }\n`;
+                fullScript += `    \n`;
+                fullScript += `    Write-ColorOutput "\`n=== COMPLETED ===" "Green"\n`;
+                fullScript += `    if ($WhatIf) {\n`;
+                fullScript += `        Write-ColorOutput "This was a simulation. Run without -WhatIf to apply changes." "Yellow"\n`;
+                fullScript += `    } else {\n`;
+                fullScript += `        Write-ColorOutput "All changes applied successfully!" "Green"\n`;
+                fullScript += `    }\n`;
+                fullScript += `    \n`;
+                fullScript += `    $uniqueInfraProjects = $allInfraProjects | Sort-Object -Unique\n`;
+                fullScript += `    Write-ColorOutput "\`nTotal infrastructure projects used: $($uniqueInfraProjects.Count)" "White"\n`;
+                fullScript += `    foreach ($proj in $uniqueInfraProjects) {\n`;
+                fullScript += `        $projName = [System.IO.Path]::GetFileNameWithoutExtension($proj)\n`;
+                fullScript += `        Write-ColorOutput "  - $projName" "Gray"\n`;
+                fullScript += `    }\n`;
+                fullScript += `}\n`;
+                fullScript += `\n`;
+                fullScript += `Main-Custom\n`;
+            } else {
+                // Standard selection, use the original Main function
+                fullScript += `\n\nMain -Selection "${selection}"`;
+            }
         } else {
             fullScript += `\n\nMain`;
         }
