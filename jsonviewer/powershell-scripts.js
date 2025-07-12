@@ -6,7 +6,6 @@ param(
     [string]$InfrastructurePath = "D:\\Projects\\KLSPL.Community.Common.Infrastructure",
     [switch]$WhatIf = $false
 )
-
 function Write-ColorOutput {
     param([string]$Message, [string]$Color = "White")
     Write-Host $Message -ForegroundColor $Color
@@ -408,38 +407,38 @@ function Process-Directory {
 
 function Main {
     param([string]$Selection = "all")
-    
+
     Write-ColorOutput "KLSPL Package Reference Replacement Tool" "White"
     Write-ColorOutput "========================================" "White"
-    
+
     if ($WhatIf) {
         Write-ColorOutput "Mode: SIMULATION" "Yellow"
     } else {
         Write-ColorOutput "Mode: MAKING ACTUAL CHANGES" "Red"
     }
-    
+
     # Get infrastructure projects
     $infraProjects = Get-InfrastructureProjects
     $packageMapping = Create-PackageMapping -InfraProjects $infraProjects
-    
+
     # Get and select directories
     $allDirectories = Get-AllDirectories
     $selectedDirectories = Select-Directories -AllDirectories $allDirectories -Selection $Selection
-    
+
     # Process each directory
     $allInfraProjects = @()
     foreach ($directory in $selectedDirectories) {
         $infraProjects = Process-Directory -Directory $directory -PackageMapping $packageMapping
         $allInfraProjects += $infraProjects
     }
-    
+
     Write-ColorOutput "\`n=== COMPLETED ===" "Green"
     if ($WhatIf) {
         Write-ColorOutput "This was a simulation. Run without -WhatIf to apply changes." "Yellow"
     } else {
         Write-ColorOutput "All changes applied successfully!" "Green"
     }
-    
+
     $uniqueInfraProjects = $allInfraProjects | Sort-Object -Unique
     Write-ColorOutput "\`nTotal infrastructure projects used: $($uniqueInfraProjects.Count)" "White"
     foreach ($proj in $uniqueInfraProjects) {
@@ -447,9 +446,6 @@ function Main {
         Write-ColorOutput "  - $projName" "Gray"
     }
 }
-
-# Auto-execute with provided selection
-Main -Selection $args[0]
 `,
 
     validateStructure: `
@@ -536,8 +532,9 @@ function Validate-Structure {
     Write-ColorOutput "Validation completed!" "White"
 }
 
-# Run the validation
-Validate-Structure
+function Main {
+    Validate-Structure
+}
 `
 };
 

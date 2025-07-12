@@ -1251,15 +1251,20 @@ ipcMain.handle('validate-project-structure', async (event, { projectsPath, infra
     try {
         console.log(`Validating project structure for: ${projectsPath}`);
 
-        // Create the PowerShell script with parameters
+        // Create the PowerShell script
         const script = POWERSHELL_SCRIPTS.validateStructure;
-        const scriptWithParams = `${script}`;
+
+        // Build parameters array
+        const params = [];
+        if (projectsPath) {
+            params.push(`-ProjectsPath "${projectsPath}"`);
+        }
+        if (infrastructurePath) {
+            params.push(`-InfrastructurePath "${infrastructurePath}"`);
+        }
 
         // Execute PowerShell script
-        const result = await executePowerShellScript(scriptWithParams, [
-            `-ProjectsPath "${projectsPath}"`,
-            `-InfrastructurePath "${infrastructurePath}"`
-        ]);
+        const result = await executePowerShellScript(script, params);
 
         return {
             success: true,
@@ -1285,11 +1290,14 @@ ipcMain.handle('replace-package-references', async (event, { projectsPath, infra
         // Create the PowerShell script with parameters
         const script = POWERSHELL_SCRIPTS.replacePackageReferences;
 
-        const params = [
-            `-ProjectsPath "${projectsPath}"`,
-            `-InfrastructurePath "${infrastructurePath}"`
-        ];
-
+        // Build parameters array
+        const params = [];
+        if (projectsPath) {
+            params.push(`-ProjectsPath "${projectsPath}"`);
+        }
+        if (infrastructurePath) {
+            params.push(`-InfrastructurePath "${infrastructurePath}"`);
+        }
         if (whatIf) {
             params.push('-WhatIf');
         }
@@ -1393,74 +1401,108 @@ $directories | ConvertTo-Json -Depth 3
 // Helper function to execute PowerShell scripts
 async function executePowerShellScript(scriptContent, parameters = [], arguments = []) {
     return new Promise((resolve, reject) => {
-        // Create a temporary script content with parameters
-        let fullScript = scriptContent;
-
-        // Add parameter execution if provided
-        if (parameters.length > 0) {
-            fullScript = `${scriptContent}\n\n# Execute with parameters\n`;
-            if (arguments.length > 0) {
-                fullScript += `Main ${arguments.map(arg => `"${arg}"`).join(' ')}`;
-            }
-        }
-
         // Determine PowerShell executable
         const psExecutable = os.platform() === 'win32' ? 'powershell.exe' : 'pwsh';
 
-        // Prepare PowerShell command
-        const psArgs = [
-            '-NoProfile',
-            '-ExecutionPolicy', 'Bypass',
-            '-Command', fullScript
-        ];
+        // Create a temporary file for the script to avoid command line escaping issues
+        const tempDir = os.tmpdir();
+        const tempScriptPath = path.join(tempDir, `temp_script_${Date.now()}.ps1`);
 
-        // Add parameters to the command
-        if (parameters.length > 0) {
-            psArgs.push(...parameters);
+        // Create the full script with parameters and function call
+        let fullScript = scriptContent;
+
+        // Add the main function call at the end
+        if (arguments.length > 0) {
+            fullScript += `\n\nMain -Selection "${arguments[0]}"`;
+        } else {
+            fullScript += `\n\nMain`;
         }
 
-        console.log('Executing PowerShell script...');
-        console.log('Parameters:', parameters);
-        console.log('Arguments:', arguments);
+        try {
+            // Write script to temporary file
+            fs.writeFileSync(tempScriptPath, fullScript, 'utf8');
 
-        const process = spawn(psExecutable, psArgs, {
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: true,
-            encoding: 'utf8'
-        });
+            // Prepare PowerShell arguments to execute the file
+            const psArgs = [
+                '-NoProfile',
+                '-ExecutionPolicy', 'Bypass',
+                '-NonInteractive',
+                '-File', tempScriptPath
+            ];
 
-        let stdout = '';
-        let stderr = '';
-
-        process.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        process.on('close', (code) => {
-            console.log(`PowerShell process exited with code: ${code}`);
-            console.log('STDOUT:', stdout);
-            if (stderr) {
-                console.log('STDERR:', stderr);
+            // Add parameter values if provided
+            if (parameters.length > 0) {
+                parameters.forEach(param => {
+                    const match = param.match(/-(\w+)\s+"([^"]+)"/);
+                    if (match) {
+                        psArgs.push(`-${match[1]}`, match[2]);
+                    } else if (param === '-WhatIf') {
+                        psArgs.push('-WhatIf');
+                    }
+                });
             }
 
-            if (code === 0) {
-                resolve({ stdout, stderr, exitCode: code });
-            } else {
-                const error = new Error(`PowerShell script failed with exit code ${code}`);
-                error.stdout = stdout;
-                error.stderr = stderr;
-                error.exitCode = code;
+            console.log('Executing PowerShell script...');
+            console.log('Executable:', psExecutable);
+            console.log('Script file:', tempScriptPath);
+            console.log('Arguments:', psArgs);
+
+            const process = spawn(psExecutable, psArgs, {
+                stdio: ['pipe', 'pipe', 'pipe'],
+                shell: false,
+                encoding: 'utf8'
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            process.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            process.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            process.on('close', (code) => {
+                // Clean up temporary file
+                try {
+                    fs.unlinkSync(tempScriptPath);
+                } catch (cleanupError) {
+                    console.warn('Could not clean up temporary script file:', cleanupError);
+                }
+
+                console.log(`PowerShell process exited with code: ${code}`);
+                console.log('STDOUT:', stdout);
+                if (stderr) {
+                    console.log('STDERR:', stderr);
+                }
+
+                if (code === 0) {
+                    resolve({ stdout, stderr, exitCode: code });
+                } else {
+                    const error = new Error(`PowerShell script failed with exit code ${code}`);
+                    error.stdout = stdout;
+                    error.stderr = stderr;
+                    error.exitCode = code;
+                    reject(error);
+                }
+            });
+
+            process.on('error', (error) => {
+                // Clean up temporary file on error
+                try {
+                    fs.unlinkSync(tempScriptPath);
+                } catch (cleanupError) {
+                    console.warn('Could not clean up temporary script file:', cleanupError);
+                }
+                console.error('PowerShell process error:', error);
                 reject(error);
-            }
-        });
+            });
 
-        process.on('error', (error) => {
-            console.error('PowerShell process error:', error);
-            reject(error);
-        });
+        } catch (fileError) {
+            console.error('Error creating temporary script file:', fileError);
+            reject(fileError);
+        }
     });
 }
