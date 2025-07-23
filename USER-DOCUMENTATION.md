@@ -120,7 +120,7 @@ Welcome to the **API Config Editor**! This guide will help you understand and us
 
 ---
 
-### Copy PostgreSQL Configuration
+### Copy PostgreSQL Configuration (NOT WORKING)
 
 - **Purpose:** Easily copy database connection settings from a dedicated PostgreSQL config file to another environment (e.g., Dev).
 - **How to Use:**
@@ -130,7 +130,7 @@ Welcome to the **API Config Editor**! This guide will help you understand and us
 
 ---
 
-### Git Integration (Discard Changes)
+### Git Integration (Discard Changes) (NOT WORKING)
 
 - **Purpose:** Discard changes to configuration files and revert to the last committed state in Git.
 - **How to Use:**
