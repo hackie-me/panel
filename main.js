@@ -9,6 +9,7 @@ const { exec, spawn } = require('child_process');
 const execAsync = util.promisify(exec);
 const { shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
+require('dotenv').config();
 
 const os = require('os');
 const POWERSHELL_SCRIPTS = require('./powershell-scripts');
@@ -475,13 +476,13 @@ async function getAuthToken() {
     try {
         const response = await httpRequest({
             method: 'POST',
-            hostname: 'REMOVED_URL',
+            hostname: process.env.API_URL,
             path: '/api_integration/Authentication/Token',
             headers: {
                 'Content-Type': 'application/json'
             }
         }, JSON.stringify({
-            client_secret: 'REMOVED_SECRET'
+            client_secret: process.env.CLIENT_SECRET
         }));
 
         const tokenData = JSON.parse(response);
@@ -508,7 +509,7 @@ async function decryptData(encryptedValue) {
         // Make the request
         const response = await httpFormRequest({
             method: 'POST',
-            hostname: 'REMOVED_URL',
+            hostname: process.env.API_URL,
             path: '/api_master/DataProtection/DecryptData',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -538,7 +539,7 @@ async function encryptData(decryptedValue) {
         // Make the request
         const response = await httpFormRequest({
             method: 'POST',
-            hostname: 'REMOVED_URL',
+            hostname: process.env.API_URL,
             path: '/api_master/DataProtection/EncryptData',
             headers: {
                 'Authorization': `Bearer ${token}`

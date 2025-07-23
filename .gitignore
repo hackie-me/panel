@@ -3,3 +3,4 @@
 /node_modules
 /jsonviewer/dist
 /dist
+.env
